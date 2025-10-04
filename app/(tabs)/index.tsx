@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { Search, X } from 'lucide-react-native';
+import { Menu, Search, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
+  Dimensions,
   FlatList,
   StyleSheet,
   Text,
@@ -9,9 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 
 import CityCard from '@/components/CityCard';
-import { useCities } from '@/contexts/CitiesContext'; // 👈 use context
+import { useCities } from '@/contexts/CitiesContext';
 import rawCities from '@/data/us_cities.json';
 
 type City = {
@@ -23,12 +25,14 @@ type City = {
 };
 
 const usCities = rawCities as City[];
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { cities } = useCities(); // 👈 full City objects
+  const { cities } = useCities();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<City[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const searchCities = (text: string) => {
     setQuery(text);
@@ -49,65 +53,106 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>MyCity</Text>
+      {/* Map Area */}
+      <View style={styles.mapArea}>
+        <MapView
+          style={{ flex: 1 }}
+          initialRegion={{
+            latitude: 37.7749,
+            longitude: -122.4194,
+            latitudeDelta: 15,
+            longitudeDelta: 15,
+          }}
+        >
+          {cities.map((city, index) => (
+            <Marker
+              key={index}
+              coordinate={{
+                latitude: parseFloat(city.lat),
+                longitude: parseFloat(city.lng),
+              }}
+              title={city.city}
+              description={city.state_name}
+            />
+          ))}
+        </MapView>
 
-      {/* Search Bar with icon + clear button */}
-      <View style={styles.searchWrapper}>
-        <Search size={20} color="#888" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for a city"
-          placeholderTextColor="#888"
-          value={query}
-          onChangeText={searchCities}
-        />
-        {query.length > 0 && (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-            <X size={20} color="#888" />
-          </TouchableOpacity>
-        )}
+        {/* Hamburger Button */}
+        <TouchableOpacity
+          style={styles.hamburger}
+          onPress={() => setSidebarOpen(!sidebarOpen)}
+        >
+          <Menu size={28} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      {query.length > 0 ? (
-        <FlatList
-          data={results}
-          keyExtractor={(item, idx) => idx.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.resultItem}
-              onPress={() =>
-                router.push({
-                  pathname: '/city/[city]',
-                  params: { ...item }, // ✅ full city object
-                })
-              }
-            >
-              <Text style={styles.resultText}>
-                {item.city}, {item.state_name}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      ) : (
-        <View style={styles.content}>
-          {cities.length === 0 ? (
-            <Text style={{ color: '#888', textAlign: 'center', marginTop: 20 }}>
-              No cities added yet
-            </Text>
-          ) : (
-            cities.map((city, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() =>
-                  router.push({
-                    pathname: '/city/[city]',
-                    params: { city: city.city, state_id: city.state_id },
-                  })
-                }
-              >
-                <CityCard city={city.city} state={city.state_name} />
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <View style={styles.sidebar}>
+          <Text style={styles.header}>MyCity</Text>
+
+          {/* Search */}
+          <View style={styles.searchWrapper}>
+            <Search size={20} color="#888" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for a city"
+              placeholderTextColor="#888"
+              value={query}
+              onChangeText={searchCities}
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <X size={20} color="#888" />
               </TouchableOpacity>
-            ))
+            )}
+          </View>
+
+          {/* Results or Saved Cities */}
+          {query.length > 0 ? (
+            <FlatList
+              data={results}
+              keyExtractor={(item, idx) => idx.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.resultItem}
+                  onPress={() => {
+                    setSidebarOpen(false); // close drawer
+                    router.push({
+                      pathname: '/city/[city]',
+                      params: { ...item },
+                    });
+                  }}
+                >
+                  <Text style={styles.resultText}>
+                    {item.city}, {item.state_name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <View style={styles.content}>
+              {cities.length === 0 ? (
+                <Text style={{ color: '#888', textAlign: 'center', marginTop: 20 }}>
+                  No cities added yet
+                </Text>
+              ) : (
+                cities.map((city, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      setSidebarOpen(false); // close drawer
+                      router.push({
+                        pathname: '/city/[city]',
+                        params: { ...city },
+                      });
+                    }}
+                  >
+                    <CityCard city={city.city} state={city.state_name} />
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
           )}
         </View>
       )}
@@ -116,15 +161,37 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', paddingTop: 60 },
+  container: { flex: 1, backgroundColor: '#000' },
+
+  mapArea: { flex: 1 },
+
+  hamburger: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    padding: 6,
+  },
+
+  sidebar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: SCREEN_WIDTH * 0.7,
+    backgroundColor: '#111',
+    paddingTop: 60,
+    borderRightColor: '#333',
+    borderRightWidth: 1,
+  },
   header: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
     paddingHorizontal: 16,
     marginBottom: 10,
   },
-
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,9 +208,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
-  clearButton: {
-    padding: 4,
-  },
+  clearButton: { padding: 4 },
 
   content: { paddingHorizontal: 16, marginTop: 20 },
   resultItem: {
