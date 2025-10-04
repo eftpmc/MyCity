@@ -165,7 +165,9 @@ export default function HomeScreen() {
           {/* Natural Events */}
           {events.map((ev, i) => {
             // each event can have multiple geometries, find the first valid coordinate
-            const geom = Array.isArray(ev.geometry) ? ev.geometry.find((g) => g.coordinates?.length >= 2) : null;
+            const geom = Array.isArray(ev.geometry)
+              ? ev.geometry.find((g: any) => Array.isArray(g?.coordinates) && g.coordinates.length >= 2)
+              : null;
             if (!geom) return null;
 
             const [lon, lat] = geom.coordinates;
