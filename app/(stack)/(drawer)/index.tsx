@@ -2,7 +2,7 @@
 import { useCities } from '@/contexts/CitiesContext';
 import { useMapLayer } from '@/contexts/MapLayerContext';
 import rawCities from '@/data/us_cities.json';
-import { City } from '@/types';
+import { City, EonetGeometry } from '@/types';
 import { DrawerActions } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { ChevronDown, LogIn, Menu, Search, X, ZoomIn } from 'lucide-react-native';
@@ -165,8 +165,9 @@ export default function HomeScreen() {
           {/* Natural Events */}
           {events.map((ev, i) => {
             // each event can have multiple geometries, find the first valid coordinate
-            const geom = Array.isArray(ev.geometry) ? ev.geometry.find((g) => g.coordinates?.length >= 2) : null;
-            if (!geom) return null;
+            const geom = Array.isArray(ev.geometry)
+              ? ev.geometry.find((g: EonetGeometry) => Array.isArray(g.coordinates) && g.coordinates.length >= 2)
+              : null;
 
             const [lon, lat] = geom.coordinates;
             return (
