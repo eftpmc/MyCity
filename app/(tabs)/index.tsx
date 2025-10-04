@@ -1,98 +1,143 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Search } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import CityCard from '@/components/CityCard';
+import { useCities } from '@/contexts/CitiesContext'; // 👈 use context
+import rawCities from '@/data/us_cities.json';
+
+type City = {
+  city: string;
+  state_id: string;
+  state_name: string;
+  lat: string;
+  lng: string;
+};
+
+const usCities = rawCities as City[];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const { cities } = useCities(); // 👈 full City objects
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<City[]>([]);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const searchCities = (text: string) => {
+    setQuery(text);
+    if (text.length < 2) {
+      setResults([]);
+      return;
+    }
+    const filtered = usCities
+      .filter((c) => c.city.toLowerCase().startsWith(text.toLowerCase()))
+      .slice(0, 20);
+    setResults(filtered);
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>MyCity</Text>
+
+      {/* Search Bar with icon */}
+      <View style={styles.searchWrapper}>
+        <Search size={20} color="#888" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search for a city"
+          placeholderTextColor="#888"
+          value={query}
+          onChangeText={searchCities}
+        />
+      </View>
+
+      {query.length > 0 ? (
+        <FlatList
+          data={results}
+          keyExtractor={(item, idx) => idx.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.resultItem}
+              onPress={() =>
+                router.push({
+                  pathname: '/city/[city]',
+                  params: { ...item }, // ✅ full city object
+                })
+              }
+            >
+              <Text style={styles.resultText}>
+                {item.city}, {item.state_name}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      ) : (
+        <View style={styles.content}>
+          {cities.length === 0 ? (
+            <Text style={{ color: '#888', textAlign: 'center', marginTop: 20 }}>
+              No cities added yet
+            </Text>
+          ) : (
+            cities.map((city, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() =>
+                  router.push({
+                    pathname: '/city/[city]',
+                    params: { ...city }, // ✅ directly use city from context
+                  })
+                }
+              >
+                <CityCard city={city.city} state={city.state_name} />
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: { flex: 1, backgroundColor: '#000', paddingTop: 60 },
+  header: {
+    fontSize: 34,
+    fontWeight: 'bold',
+    color: '#fff',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+
+  searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
+    backgroundColor: '#1c1c1e',
+    borderRadius: 12,
+    marginHorizontal: 16,
     marginBottom: 8,
+    paddingHorizontal: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  searchIcon: { marginRight: 6 },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    paddingVertical: 12,
+    fontSize: 16,
   },
+
+  content: { paddingHorizontal: 16, marginTop: 20 },
+  resultItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomColor: '#333',
+    borderBottomWidth: 1,
+  },
+  resultText: { color: '#fff', fontSize: 16 },
 });
