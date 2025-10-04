@@ -16,8 +16,33 @@ import {
   View,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import ClusteredMapView from 'react-native-map-clustering';
+import { useMemo, useCallback, useEffect } from 'react';
+import { useEvents, viewportKey, useDebouncedValue } from '@/src/store/eventsStore';
+// Local bbox helper to avoid runtime coupling
+const regionToBboxLocal = (r: { latitude:number; longitude:number; latitudeDelta:number; longitudeDelta:number; }): [number,number,number,number] => {
+  const west = r.longitude - r.longitudeDelta / 2;
+  const east = r.longitude + r.longitudeDelta / 2;
+  const south = r.latitude - r.latitudeDelta / 2;
+  const north = r.latitude + r.latitudeDelta / 2;
+  return [west, south, east, north];
+};
+import EventsFilterSheet, { type FilterState } from '@/src/components/EventsFilterSheet';
+import { EventDetailsSheet } from '@/src/components/EventDetailsSheet';
+import type { EonetEvent } from '@/src/types/events';
+import { TimelineBar } from '@/src/components/TimelineBar';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
-const usCities = rawCities as City[];
+const usCities: City[] = (rawCities as any[]).map((c:any)=> ({
+  city: c.city,
+  state_id: c.state_id,
+  state_name: c.state_name,
+  lat: c.lat,
+  lng: c.lng,
+  population: typeof c.population === 'number' ? c.population : (c.population ? Number(c.population) : undefined),
+}));
 
 // helper: radians
 const toRad = (value: number) => (value * Math.PI) / 180;
@@ -46,6 +71,26 @@ export default function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [nearestCity, setNearestCity] = useState<City | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(15);
+  const [region, setRegion] = useState({ latitude: 20, longitude: 0, latitudeDelta: 60, longitudeDelta: 120 });
+  const [activeEvent, setActiveEvent] = useState<EonetEvent | null>(null);
+  const [filters, setFilters] = useState<FilterState>(()=> ({
+    start: dayjs().utc().subtract(365, 'day').format('YYYY-MM-DD'),
+    end: dayjs().utc().format('YYYY-MM-DD'),
+    categories: ['dustHaze','manmade','seaLakeIce','severeStorms','snow','volcanoes','waterColor','floods','wildfires'],
+    viewportOnly: true,
+  }));
+
+  const rawEventQuery = useMemo(()=> ({
+    start: filters.start,
+    end: filters.end,
+    categories: filters.categories,
+    status: 'all' as const,
+  bbox: filters.viewportOnly ? regionToBboxLocal(region) : undefined,
+    limit: 100,
+  }), [filters, region]);
+  const eventQuery = useDebouncedValue(rawEventQuery, 400);
+  const vpk = useDebouncedValue(useMemo(()=> filters.viewportOnly ? viewportKey(region) : 'all', [filters.viewportOnly, region]), 400);
+  const { data: eventsData, isLoading: eventsLoading, error: eventsError, refetch: refetchEvents, isFetching } = useEvents(eventQuery as any, vpk);
 
   const mapRef = useRef<MapView>(null);
 
@@ -107,19 +152,15 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {/* Map */}
-      <MapView
+      <ClusteredMapView
         ref={mapRef}
         style={RNStyleSheet.absoluteFillObject}
-        initialRegion={{
-          latitude: 37.7749,
-          longitude: -122.4194,
-          latitudeDelta: 15,
-          longitudeDelta: 15,
-        }}
-        onRegionChangeComplete={(region) => {
-          setZoomLevel(region.latitudeDelta);
-          if (region.latitudeDelta < 2) {
-            updateNearestCity(region.latitude, region.longitude);
+        initialRegion={region}
+        onRegionChangeComplete={(r) => {
+          setRegion(r);
+          setZoomLevel(r.latitudeDelta);
+          if (r.latitudeDelta < 2) {
+            updateNearestCity(r.latitude, r.longitude);
           } else {
             setNearestCity(null);
           }
@@ -138,7 +179,27 @@ export default function HomeScreen() {
             onPress={() => flyToCity(city)}
           />
         ))}
-      </MapView>
+
+        {/* EONET Events */}
+        {(eventsData?.events ?? []).map((ev) => {
+          const geoms = (ev as any).geometry as any[] | undefined;
+          if (!Array.isArray(geoms)) return null;
+          const firstPoint = geoms.find((g: any) => g && g.type === 'Point' && Array.isArray(g.coordinates));
+          const coords = firstPoint?.coordinates as number[] | undefined;
+          if (!coords || coords.length < 2) return null;
+          const [lon, lat] = coords;
+          return (
+            <Marker
+              key={ev.id}
+              coordinate={{ latitude: lat, longitude: lon }}
+              title={ev.title}
+              description={ev.categories.map((c)=> c.title).join(', ')}
+              pinColor="#e76f51"
+              onPress={() => setActiveEvent(ev)}
+            />
+          );
+        })}
+      </ClusteredMapView>
 
       {/* Top controls (hamburger + search) */}
       <View style={styles.topControls}>
@@ -239,6 +300,64 @@ export default function HomeScreen() {
           </View>
         </View>
       )}
+
+      {/* Events filter UI */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+        <EventsFilterSheet value={filters} onChange={setFilters} />
+      </View>
+
+  {/* Timeline */}
+  <TimelineBar events={eventsData?.events ?? []} startDate={filters.start} endDate={filters.end} />
+
+      {/* Events counter: under the search bar, bottom-right side */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 110, // just under the search area (matches resultsList top)
+          right: 20,
+          backgroundColor: '#1c1c1e',
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 14,
+          zIndex: 3,
+          shadowColor: '#000',
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+        }}
+        accessibilityLabel="Events count"
+      >
+        <Text style={{ color: '#fff', fontWeight: '600' }}>Events: {eventsData?.events.length ?? 0}</Text>
+      </View>
+
+      {/* Loading / Empty */}
+      {!!eventsError && (
+        <View style={{ position:'absolute', top: 110, left: 20, right: 20, backgroundColor:'#3a1d1d', borderColor:'#a33', borderWidth:1, paddingHorizontal:12, paddingVertical:10, borderRadius:12, zIndex:3 }}>
+          <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between' }}>
+            <Text style={{ color:'#ffdddd', flex:1, marginRight:12 }} numberOfLines={2}>
+              Failed to load events. {String(eventsError.message || 'Please try again.')}
+            </Text>
+            <TouchableOpacity onPress={() => refetchEvents()} style={{ backgroundColor:'#b33', paddingHorizontal:10, paddingVertical:6, borderRadius:10 }}>
+              <Text style={{ color:'#fff', fontWeight:'600' }}>{isFetching ? 'Retrying…' : 'Retry'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {eventsLoading && (
+        <View style={{ position:'absolute', top: 110, right: 20, marginTop: 44, backgroundColor:'#111a', paddingHorizontal:10, paddingVertical:6, borderRadius:12, zIndex:3 }}>
+          <Text style={{ color:'#fff' }}>Loading events…</Text>
+        </View>
+      )}
+      {!eventsLoading && (eventsData?.events?.length ?? 0) === 0 && (
+        <View style={{ position:'absolute', top: 110, right: 20, marginTop: 44, backgroundColor:'#111a', paddingHorizontal:10, paddingVertical:6, borderRadius:12, zIndex:3 }}>
+          <Text style={{ color:'#fff' }}>No events in range</Text>
+        </View>
+      )}
+
+      {/* Event details */}
+      <View pointerEvents="box-none" style={{ position:'absolute', left: 0, right: 0, bottom: 0 }}>
+        <EventDetailsSheet event={activeEvent} onClose={()=> setActiveEvent(null)} />
+      </View>
     </View>
   );
 }

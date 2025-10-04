@@ -13,7 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const usCities = rawCities as City[];
+const usCities: City[] = (rawCities as any[]).map((c:any)=> ({
+  city: c.city,
+  state_id: c.state_id,
+  state_name: c.state_name,
+  lat: c.lat,
+  lng: c.lng,
+  population: typeof c.population === 'number' ? c.population : (c.population ? Number(c.population) : undefined),
+}));
 
 export default function CityDetailsPage() {
   const { city: cityName, state_id } = useLocalSearchParams<{

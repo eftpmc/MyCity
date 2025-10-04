@@ -48,3 +48,18 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Troubleshooting
+
+- Expo start path error (package.json not found): Ensure you start in the workspace root `MyCity/` (the folder containing `package.json`). If using commands from another location, `cd "/Applications/MyCity /MyCity"` first.
+- iOS Simulator “No iOS devices available in Simulator.app”: Open Xcode > Settings > Platforms and install at least one iOS simulator runtime, then launch Simulator.app once. Alternatively, connect a physical iOS device or use the Android emulator.
+- Metro stuck or stale cache: Start with a clear cache.
+   - Tunnel: `npx expo start --tunnel --clear`
+   - LAN: `npx expo start --clear`
+- Port 8081 in use: Identify and stop the process.
+   - macOS: `lsof -i :8081 | grep LISTEN` then `kill -9 <PID>`
+
+## Tests
+
+- Run unit tests: `npx vitest run`
+- What’s covered: EONET URL building and event fetching pagination/abort handling.
