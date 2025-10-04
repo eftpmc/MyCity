@@ -20,7 +20,7 @@ export default function RootLayout() {
       <GestureHandlerRootView>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-         <Stack.Screen name="city/[city]/index" options={{ headerShown: false }} />
+         <Stack.Screen name="city/[city]" options={{ headerShown: false }} />
       </Stack>
       </GestureHandlerRootView>
       </CitiesProvider>

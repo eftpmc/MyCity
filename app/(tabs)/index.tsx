@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Search } from 'lucide-react-native';
+import { Search, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   FlatList,
@@ -42,11 +42,16 @@ export default function HomeScreen() {
     setResults(filtered);
   };
 
+  const clearSearch = () => {
+    setQuery('');
+    setResults([]);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>MyCity</Text>
 
-      {/* Search Bar with icon */}
+      {/* Search Bar with icon + clear button */}
       <View style={styles.searchWrapper}>
         <Search size={20} color="#888" style={styles.searchIcon} />
         <TextInput
@@ -56,6 +61,11 @@ export default function HomeScreen() {
           value={query}
           onChangeText={searchCities}
         />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+            <X size={20} color="#888" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {query.length > 0 ? (
@@ -91,7 +101,7 @@ export default function HomeScreen() {
                 onPress={() =>
                   router.push({
                     pathname: '/city/[city]',
-                    params: { ...city }, // ✅ directly use city from context
+                    params: { city: city.city, state_id: city.state_id },
                   })
                 }
               >
@@ -130,6 +140,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     paddingVertical: 12,
     fontSize: 16,
+  },
+  clearButton: {
+    padding: 4,
   },
 
   content: { paddingHorizontal: 16, marginTop: 20 },

@@ -1,4 +1,5 @@
 import { useCities } from '@/contexts/CitiesContext';
+import rawCities from '@/data/us_cities.json';
 import { useLocalSearchParams } from 'expo-router';
 import { Minus, Plus } from 'lucide-react-native';
 import React from 'react';
@@ -8,27 +9,40 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // ✅ use this one
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+type City = {
+  city: string;
+  state_id: string;
+  state_name: string;
+  lat: string;
+  lng: string;
+};
+
+const usCities = rawCities as City[];
 
 export default function CityDetailsPage() {
-  const params = useLocalSearchParams<{
+  const { city: cityName, state_id } = useLocalSearchParams<{
     city: string;
     state_id: string;
-    state_name: string;
-    lat: string;
-    lng: string;
   }>();
 
   const { addCity, removeCity, isAdded } = useCities();
 
-  // Normalize params into a City object
-  const city = {
-    city: params.city || '',
-    state_id: params.state_id || '',
-    state_name: params.state_name || '',
-    lat: params.lat || '',
-    lng: params.lng || '',
-  };
+  // Lookup the city object from dataset
+  const city = usCities.find(
+    (c) => c.city === cityName && c.state_id === state_id
+  );
+
+  if (!city) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={{ color: '#fff', padding: 20 }}>
+          City not found
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   const added = isAdded(city);
 
@@ -43,13 +57,13 @@ export default function CityDetailsPage() {
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.button, added ? styles.removeButton : styles.addButton]}
+          style={styles.iconButton}
           onPress={() => (added ? removeCity(city) : addCity(city))}
         >
           {added ? (
-            <Minus size={20} color="#fff" />
+            <Minus size={32} color="#fff" />
           ) : (
-            <Plus size={20} color="#fff" />
+            <Plus size={32} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
@@ -63,7 +77,7 @@ export default function CityDetailsPage() {
         </View>
       </View>
 
-      {/* Placeholder for future details */}
+      {/* Placeholder Sections */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Weather</Text>
         <Text style={styles.placeholder}>Coming soon...</Text>
@@ -89,20 +103,10 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 6 },
   subtitle: { fontSize: 18, color: '#aaa' },
-
-  button: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  addButton: { backgroundColor: '#4aa3ff' },
-  removeButton: { backgroundColor: '#ff4a4a' },
-
+  iconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   section: { paddingHorizontal: 20, marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 8 },
-
   coords: { flexDirection: 'row', gap: 20 },
   coordText: { fontSize: 14, color: '#777' },
-
   placeholder: { fontSize: 14, color: '#555' },
 });
