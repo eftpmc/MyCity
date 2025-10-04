@@ -33,9 +33,9 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
@@ -50,6 +50,9 @@ export default function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [nearestCity, setNearestCity] = useState<City | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(15);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const mapRef = useRef<MapView>(null);
@@ -107,6 +110,21 @@ export default function HomeScreen() {
     setNearestCity(bestCity);
   };
 
+  const fetchEvents = async () => {
+    try {
+      setLoadingEvents(true);
+      setEventsError(null);
+
+      const res = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=100');
+      const data = await res.json();
+      setEvents(data.events || []);
+    } catch (err: any) {
+      setEventsError(err.message || 'Failed to load events');
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
   const selectLayer = (id: string | null) => {
     if (!id) {
       setLayer(null);
@@ -116,6 +134,10 @@ export default function HomeScreen() {
     }
     setDropdownVisible(false);
   };
+
+  React.useEffect(() => {
+    fetchEvents();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -140,6 +162,23 @@ export default function HomeScreen() {
         onPress={() => setSelectedCity(null)}
       >
         <>
+          {/* Natural Events */}
+          {events.map((ev, i) => {
+            // each event can have multiple geometries, find the first valid coordinate
+            const geom = Array.isArray(ev.geometry) ? ev.geometry.find((g) => g.coordinates?.length >= 2) : null;
+            if (!geom) return null;
+
+            const [lon, lat] = geom.coordinates;
+            return (
+              <Marker
+                key={`event-${i}`}
+                coordinate={{ latitude: lat, longitude: lon }}
+                title={ev.title}
+                description={ev.categories?.map((c: any) => c.title).join(', ')}
+                pinColor="#ff7043" // orange tone
+              />
+            );
+          })}
           {cities.map((city, index) => (
             <Marker
               key={index}
