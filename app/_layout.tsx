@@ -7,22 +7,26 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <CitiesProvider>
-      <GestureHandlerRootView>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-         <Stack.Screen name="city/[city]" options={{ headerShown: false }} />
-      </Stack>
-      </GestureHandlerRootView>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(drawer)" options={{
+              headerShown: false
+            }} />
+            <Stack.Screen
+              name="city"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_right',
+              }}
+            />
+          </Stack>
+        </GestureHandlerRootView>
       </CitiesProvider>
       <StatusBar style="auto" />
     </ThemeProvider>

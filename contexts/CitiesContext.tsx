@@ -1,13 +1,6 @@
 // contexts/CitiesContext.tsx
+import { City } from '@/types';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
-
-export type City = {
-  city: string;
-  state_id: string;
-  state_name: string;
-  lat: string;
-  lng: string;
-};
 
 type CitiesContextType = {
   cities: City[];

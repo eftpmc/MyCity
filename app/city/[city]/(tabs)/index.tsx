@@ -1,7 +1,9 @@
 import { useCities } from '@/contexts/CitiesContext';
 import rawCities from '@/data/us_cities.json';
-import { useLocalSearchParams } from 'expo-router';
-import { Minus, Plus } from 'lucide-react-native';
+import { City } from '@/types';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Map, Menu, Minus, Plus } from 'lucide-react-native';
 import React from 'react';
 import {
   StyleSheet,
@@ -10,14 +12,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type City = {
-  city: string;
-  state_id: string;
-  state_name: string;
-  lat: string;
-  lng: string;
-};
 
 const usCities = rawCities as City[];
 
@@ -28,6 +22,8 @@ export default function CityDetailsPage() {
   }>();
 
   const { addCity, removeCity, isAdded } = useCities();
+  const navigation = useNavigation();
+  const router = useRouter();
 
   // Lookup the city object from dataset
   const city = usCities.find(
@@ -48,6 +44,23 @@ export default function CityDetailsPage() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Top controls: hamburger + map button */}
+      <View style={styles.topControls}>
+        <TouchableOpacity
+          style={styles.squareButton}
+          onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+        >
+          <Menu size={22} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.squareButton}
+          onPress={() => router.replace('/')}
+        >
+          <Map size={22} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
       {/* Header Info with Add/Remove button */}
       <View style={styles.header}>
         <View>
@@ -93,17 +106,37 @@ export default function CityDetailsPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  header: {
+
+  topControls: {
+    flexDirection: 'row',
     paddingHorizontal: 20,
     paddingTop: 20,
+    gap: 12,
+  },
+
+  squareButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#1c1c1e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  header: {
+    paddingHorizontal: 20,
+    marginTop: 20,
     marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 6 },
   subtitle: { fontSize: 18, color: '#aaa' },
+
   iconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+
   section: { paddingHorizontal: 20, marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 8 },
   coords: { flexDirection: 'row', gap: 20 },

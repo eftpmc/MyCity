@@ -1,8 +1,9 @@
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Tabs, useLocalSearchParams } from 'expo-router';
-import { CloudSun, Home } from 'lucide-react-native';
-import React from 'react';
+// app/city/[city]/(tabs)/_layout.tsx
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Tabs, useLocalSearchParams } from "expo-router";
+import { CloudSun, Home } from "lucide-react-native";
+import React from "react";
 
 export default function CityTabsLayout() {
   const { city } = useLocalSearchParams<{ city: string }>();
@@ -12,22 +13,21 @@ export default function CityTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        headerTitle: city, // show city name in the header
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarStyle: { backgroundColor: '#000' },
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarStyle: { backgroundColor: "#000" },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Overview',
+          title: "Overview",
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
-          title: 'Reports',
+          title: "Reports",
           tabBarIcon: ({ color, size }) => <CloudSun color={color} size={size} />,
         }}
       />
