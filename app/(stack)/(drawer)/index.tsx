@@ -1,13 +1,16 @@
 // app/(drawer)/index.tsx
 import { useCities } from '@/contexts/CitiesContext';
+import { useMapLayer } from '@/contexts/MapLayerContext';
 import rawCities from '@/data/us_cities.json';
 import { City } from '@/types';
 import { DrawerActions } from '@react-navigation/native';
-import { useNavigation, useRouter } from "expo-router";
-import { LogIn, Menu, Search, X, ZoomIn } from 'lucide-react-native';
+import { useNavigation, useRouter } from 'expo-router';
+import { ChevronDown, LogIn, Menu, Search, X, ZoomIn } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import {
   FlatList,
+  Modal,
+  Pressable,
   StyleSheet as RNStyleSheet,
   StyleSheet,
   Text,
@@ -15,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 
 const usCities = rawCities as City[];
 
@@ -40,12 +43,14 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const { cities } = useCities();
+  const { activeLayer, setLayer, availableLayers } = useMapLayer();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [nearestCity, setNearestCity] = useState<City | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(15);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const mapRef = useRef<MapView>(null);
 
@@ -91,8 +96,6 @@ export default function HomeScreen() {
     for (const city of usCities) {
       const dist = getDistance(lat, lng, parseFloat(city.lat), parseFloat(city.lng));
       const pop = city.population ?? 0;
-
-      // Score: distance divided by log(population+1)
       const score = dist / (Math.log(pop + 1) || 1);
 
       if (score < bestScore) {
@@ -102,6 +105,16 @@ export default function HomeScreen() {
     }
 
     setNearestCity(bestCity);
+  };
+
+  const selectLayer = (id: string | null) => {
+    if (!id) {
+      setLayer(null);
+    } else {
+      const layer = availableLayers.find((l) => l.id === id) || null;
+      setLayer(layer);
+    }
+    setDropdownVisible(false);
   };
 
   return (
@@ -126,21 +139,31 @@ export default function HomeScreen() {
         }}
         onPress={() => setSelectedCity(null)}
       >
-        {cities.map((city, index) => (
-          <Marker
-            key={index}
-            coordinate={{
-              latitude: parseFloat(city.lat),
-              longitude: parseFloat(city.lng),
-            }}
-            title={city.city}
-            description={city.state_name}
-            onPress={() => flyToCity(city)}
-          />
-        ))}
+        <>
+          {cities.map((city, index) => (
+            <Marker
+              key={index}
+              coordinate={{
+                latitude: parseFloat(city.lat),
+                longitude: parseFloat(city.lng),
+              }}
+              title={city.city}
+              description={city.state_name}
+              onPress={() => flyToCity(city)}
+            />
+          ))}
+          {activeLayer && (
+            <UrlTile
+              urlTemplate={activeLayer.url}
+              maximumZ={activeLayer.maxZoom ?? 9}
+              zIndex={-1}
+              tileSize={256}
+            />
+          )}
+        </>
       </MapView>
 
-      {/* Top controls (hamburger + search) */}
+      {/* Top controls (hamburger + search + dropdown) */}
       <View style={styles.topControls}>
         <TouchableOpacity
           style={styles.hamburger}
@@ -164,7 +187,57 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Dropdown Button */}
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setDropdownVisible(true)}
+        >
+          <Text style={styles.dropdownText}>
+            {activeLayer?.name || 'No Layer'}
+          </Text>
+          <ChevronDown size={18} color="#fff" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
       </View>
+
+      {/* Dropdown Modal */}
+      <Modal
+        visible={dropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setDropdownVisible(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => selectLayer(null)}
+            >
+              <Text style={styles.dropdownItemText}>No Layer</Text>
+            </TouchableOpacity>
+
+            {availableLayers.map((layer) => (
+              <TouchableOpacity
+                key={layer.id}
+                style={styles.dropdownItem}
+                onPress={() => selectLayer(layer.id)}
+              >
+                <Text
+                  style={[
+                    styles.dropdownItemText,
+                    activeLayer?.id === layer.id && { color: '#0af' },
+                  ]}
+                >
+                  {layer.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Search results */}
       {query.length > 0 && (
@@ -188,7 +261,7 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Quick nearest city card when not searching */}
+      {/* Quick nearest city card */}
       {query.length === 0 && !selectedCity && nearestCity && zoomLevel < 2 && (
         <View style={styles.quickResultWrap}>
           <TouchableOpacity
@@ -275,9 +348,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 48,
   },
+
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, color: '#fff', fontSize: 16 },
   clearButton: { padding: 4 },
+
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1c1c1e',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    marginLeft: 10,
+  },
+  dropdownText: { color: '#fff', fontSize: 14 },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownMenu: {
+    backgroundColor: '#1c1c1e',
+    borderRadius: 12,
+    width: 260,
+    paddingVertical: 8,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  dropdownItemText: {
+    color: '#fff',
+    fontSize: 15,
+  },
 
   resultsList: {
     position: 'absolute',
@@ -287,11 +393,7 @@ const styles = StyleSheet.create({
     maxHeight: 280,
     zIndex: 2,
   },
-
-  resultsContainer: {
-    paddingBottom: 12,
-  },
-
+  resultsContainer: { paddingBottom: 12 },
   resultItem: {
     backgroundColor: '#1c1c1e',
     borderRadius: 12,
@@ -304,19 +406,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
-
-  resultTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  resultSubtitle: {
-    color: '#9a9a9a',
-    fontSize: 13,
-    marginTop: 2,
-  },
-
+  resultTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  resultSubtitle: { color: '#9a9a9a', fontSize: 13, marginTop: 2 },
   quickResultWrap: {
     position: 'absolute',
     top: 110,
@@ -325,7 +416,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
 
-  // Bottom center menu
   bottomWrap: {
     position: 'absolute',
     left: 0,
