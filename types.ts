@@ -6,3 +6,9 @@ export type City = {
   lng: string;
   population?: number;
 };
+
+export type EonetGeometry = {
+  coordinates?: number[];
+  date?: string;
+  type?: string;
+};
