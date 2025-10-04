@@ -144,7 +144,7 @@ export default function HomeScreen() {
       <View style={styles.topControls}>
         <TouchableOpacity
           style={styles.hamburger}
-          onPress={() => navigation.getParent()?.dispatch(DrawerActions.toggleDrawer())}
+          onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
         >
           <Menu size={22} color="#fff" />
         </TouchableOpacity>

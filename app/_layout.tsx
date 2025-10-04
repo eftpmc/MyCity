@@ -1,11 +1,11 @@
+import CustomDrawer from '@/components/CustomDrawer';
 import { CitiesProvider } from '@/contexts/CitiesContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -14,18 +14,16 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <CitiesProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(drawer)" options={{
-              headerShown: false
-            }} />
-            <Stack.Screen
-              name="city"
-              options={{
-                headerShown: false,
-                animation: 'slide_from_right',
-              }}
-            />
-          </Stack>
+          <Drawer
+            drawerContent={(props) => <CustomDrawer {...props} />}
+            screenOptions={{
+              headerShown: false,
+              drawerStyle: { backgroundColor: '#111', width: 280 },
+            }}
+          >
+            {/* One screen that hosts a Stack which includes BOTH your map and city routes */}
+            <Drawer.Screen name="(stack)" options={{ drawerLabel: 'Map' }} />
+          </Drawer>
         </GestureHandlerRootView>
       </CitiesProvider>
       <StatusBar style="auto" />

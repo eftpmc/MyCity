@@ -44,7 +44,7 @@ export default function CityDetailsPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top controls: hamburger + map button */}
+      {/* Top controls: hamburger + map + add/remove button */}
       <View style={styles.topControls}>
         <TouchableOpacity
           style={styles.squareButton}
@@ -53,15 +53,28 @@ export default function CityDetailsPage() {
           <Menu size={22} color="#fff" />
         </TouchableOpacity>
 
+        <View style={{ flex: 1 }} />
+
         <TouchableOpacity
           style={styles.squareButton}
           onPress={() => router.replace('/')}
         >
           <Map size={22} color="#fff" />
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.squareButton}
+          onPress={() => (added ? removeCity(city) : addCity(city))}
+        >
+          {added ? (
+            <Minus size={22} color="#fff" />
+          ) : (
+            <Plus size={22} color="#fff" />
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Header Info with Add/Remove button */}
+      {/* Header Info */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{city.city}</Text>
@@ -69,16 +82,6 @@ export default function CityDetailsPage() {
             {city.state_name} ({city.state_id})
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => (added ? removeCity(city) : addCity(city))}
-        >
-          {added ? (
-            <Minus size={32} color="#fff" />
-          ) : (
-            <Plus size={32} color="#fff" />
-          )}
-        </TouchableOpacity>
       </View>
 
       {/* Coordinates Section */}
@@ -109,6 +112,7 @@ const styles = StyleSheet.create({
 
   topControls: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20,
     gap: 12,
@@ -127,15 +131,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 20,
     marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
 
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 6 },
   subtitle: { fontSize: 18, color: '#aaa' },
-
-  iconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 
   section: { paddingHorizontal: 20, marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 8 },
