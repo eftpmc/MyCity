@@ -5,13 +5,14 @@ import rawCities from "@/data/us_cities.json";
 import { City } from "@/types";
 import { useNavigation, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import MapView from "react-native-maps";
+import { StyleSheet, View, TouchableOpacity, Text, Modal, Platform } from "react-native";
+import MapView, { Region } from "react-native-maps";
 
 import CityMenu from "@/components/CityMenu";
 import LayerDropdown from "@/components/LayerDropdown";
 import MapDisplay from "@/components/MapDisplay";
 import TopControls from "@/components/TopControls";
+import { EventsFilter } from "@/contexts/EventFunctionality/EventsFilter";
 
 const usCities = rawCities as City[];
 
@@ -31,7 +32,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { cities } = useCities();
   const { activeLayer, setLayer, availableLayers } = useMapLayer();
-  const { events } = useEvents(); // ⬅️ from context
+  const { events, filters, setFilters, setRegion } = useEvents();
   const mapRef = useRef<MapView | null>(null);
 
   const [query, setQuery] = useState("");
@@ -40,6 +41,7 @@ export default function HomeScreen() {
   const [nearestCity, setNearestCity] = useState<City | null>(null);
   const [zoomLevel, setZoomLevel] = useState(15);
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const searchCities = (text: string) => {
     setQuery(text);
@@ -93,6 +95,7 @@ export default function HomeScreen() {
         onRegionChange={updateNearestCity}
         onDeselectCity={() => setSelectedCity(null)}
         setZoomLevel={setZoomLevel}
+        onRegionChangeComplete={(region: Region) => setRegion(region)}
       />
 
       <TopControls
@@ -125,10 +128,104 @@ export default function HomeScreen() {
         setSelectedCity={setSelectedCity}
         router={router}
       />
+
+      {/* Event Counter */}
+      <View style={styles.counterPill}>
+        <Text style={styles.counterText}>Events: {events.length}</Text>
+      </View>
+
+      {/* Filter Button */}
+      <TouchableOpacity
+        style={styles.filterButton}
+        onPress={() => setShowFilters(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.filterButtonText}>🔍 Filters</Text>
+      </TouchableOpacity>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilters}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilters(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <EventsFilter value={filters} onChange={setFilters} />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowFilters(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
+  counterPill: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 20,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  counterText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  filterButton: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 40 : 20,
+    right: 20,
+    backgroundColor: '#4A90E2',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'transparent',
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  closeButton: {
+    backgroundColor: '#4A90E2',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

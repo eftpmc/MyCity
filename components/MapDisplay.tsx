@@ -2,6 +2,7 @@ import { City, EonetGeometry } from '@/types';
 import React from 'react';
 import { StyleSheet as RNStyleSheet } from 'react-native';
 import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
+import { getEventPinColor } from '@/contexts/EventFunctionality/eventCategoryConfig';
 
 interface Props {
   mapRef: React.RefObject<MapView | null>;
@@ -12,6 +13,7 @@ interface Props {
   onRegionChange: (lat: number, lng: number) => void;
   onDeselectCity: () => void;
   setZoomLevel: (z: number) => void;
+  onRegionChangeComplete?: (region: Region) => void;
 }
 
 export default function MapDisplay({
@@ -23,6 +25,7 @@ export default function MapDisplay({
   onRegionChange,
   onDeselectCity,
   setZoomLevel,
+  onRegionChangeComplete,
 }: Props) {
   return (
     <MapView
@@ -38,6 +41,10 @@ export default function MapDisplay({
         setZoomLevel(region.latitudeDelta);
         if (region.latitudeDelta < 2) {
           onRegionChange(region.latitude, region.longitude);
+        }
+        // Track region for event filtering
+        if (onRegionChangeComplete) {
+          onRegionChangeComplete(region);
         }
       }}
       onPress={onDeselectCity}
@@ -60,7 +67,7 @@ export default function MapDisplay({
               coordinate={{ latitude: lat, longitude: lon }}
               title={ev.title}
               description={ev.categories?.map((c: any) => c.title).join(', ')}
-              pinColor="#ff7043"
+              pinColor={getEventPinColor(ev)}
             />
           );
         })}
