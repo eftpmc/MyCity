@@ -1,29 +1,28 @@
-import { useCities } from '@/contexts/CitiesContext';
-import { useMapLayer } from '@/contexts/MapLayerContext';
-import rawCities from '@/data/us_cities.json';
-import { City } from '@/types';
-import { useNavigation, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import MapView from 'react-native-maps';
+import { useCities } from "@/contexts/CitiesContext";
+import { useEvents } from "@/contexts/EventContext";
+import { useMapLayer } from "@/contexts/MapLayerContext";
+import rawCities from "@/data/us_cities.json";
+import { City } from "@/types";
+import { useNavigation, useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import MapView from "react-native-maps";
 
-import CityMenu from '@/components/CityMenu';
-import LayerDropdown from '@/components/LayerDropdown';
-import MapDisplay from '@/components/MapDisplay';
-import TopControls from '@/components/TopControls';
+import CityMenu from "@/components/CityMenu";
+import LayerDropdown from "@/components/LayerDropdown";
+import MapDisplay from "@/components/MapDisplay";
+import TopControls from "@/components/TopControls";
 
 const usCities = rawCities as City[];
 
-const toRad = (value: number) => (value * Math.PI) / 180;
+const toRad = (v: number) => (v * Math.PI) / 180;
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
@@ -32,14 +31,14 @@ export default function HomeScreen() {
   const router = useRouter();
   const { cities } = useCities();
   const { activeLayer, setLayer, availableLayers } = useMapLayer();
+  const { events } = useEvents(); // ⬅️ from context
   const mapRef = useRef<MapView | null>(null);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [nearestCity, setNearestCity] = useState<City | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(15);
-  const [events, setEvents] = useState<any[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(15);
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const searchCities = (text: string) => {
@@ -64,14 +63,13 @@ export default function HomeScreen() {
   const flyToCity = (city: City) => {
     animateTo(city, 0.7, 2000);
     setSelectedCity(city);
-    setQuery('');
+    setQuery("");
     setResults([]);
   };
 
   const updateNearestCity = (lat: number, lng: number) => {
     let bestCity: City | null = null;
     let bestScore = Infinity;
-
     for (const city of usCities) {
       const dist = getDistance(lat, lng, parseFloat(city.lat), parseFloat(city.lng));
       const pop = city.population ?? 0;
@@ -83,16 +81,6 @@ export default function HomeScreen() {
     }
     setNearestCity(bestCity);
   };
-
-  const fetchEvents = async () => {
-    const res = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=100');
-    const data = await res.json();
-    setEvents(data.events || []);
-  };
-
-  useEffect(() => {
-    fetchEvents();
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -123,6 +111,7 @@ export default function HomeScreen() {
             const geom = Array.isArray(ev.geometry) ? ev.geometry.find((g) => g.coordinates?.length >= 2) : null;
             if (!geom) return null;
 
+<<<<<<< Updated upstream
             const [lon, lat] = geom.coordinates;
             return (
               <Marker
@@ -156,6 +145,21 @@ export default function HomeScreen() {
           )}
         </>
       </MapView>
+=======
+      <TopControls
+        navigation={navigation}
+        query={query}
+        searchCities={searchCities}
+        clearSearch={() => {
+          setQuery("");
+          setResults([]);
+        }}
+        activeLayer={activeLayer}
+        setDropdownVisible={setDropdownVisible}
+        results={results}
+        flyToCity={flyToCity}
+      />
+>>>>>>> Stashed changes
 
       {/* Top controls (hamburger + search + dropdown) */}
       <View style={styles.topControls}>
@@ -216,5 +220,5 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: "#000" },
 });

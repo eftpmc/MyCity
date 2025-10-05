@@ -1,5 +1,6 @@
 import CustomDrawer from '@/components/CustomDrawer';
 import { CitiesProvider } from '@/contexts/CitiesContext';
+import { EventProvider } from "@/contexts/EventContext";
 import { MapLayerProvider } from '@/contexts/MapLayerContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -14,6 +15,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <MapLayerProvider>
+        <EventProvider>
       <CitiesProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <Drawer
@@ -28,6 +30,7 @@ export default function RootLayout() {
           </Drawer>
         </GestureHandlerRootView>
       </CitiesProvider>
+      </EventProvider>
       </MapLayerProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
