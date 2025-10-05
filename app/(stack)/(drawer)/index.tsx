@@ -5,19 +5,18 @@ import rawCities from "@/data/us_cities.json";
 import { City } from "@/types";
 import { useNavigation, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Text, Modal, Platform } from "react-native";
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Region } from "react-native-maps";
 
 import CityMenu from "@/components/CityMenu";
 import LayerDropdown from "@/components/LayerDropdown";
-import LayerTimeline from "@/components/LayerTimeline"; // ⬅️ new import
+import LayerTimeline from "@/components/LayerTimeline";
 import MapDisplay from "@/components/MapDisplay";
 import TopControls from "@/components/TopControls";
 import { EventsFilter } from "@/contexts/EventFunctionality/EventsFilter";
 
 const usCities = rawCities as City[];
 
-// helper functions for distance calc
 const toRad = (v: number) => (v * Math.PI) / 180;
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371;
@@ -45,7 +44,6 @@ export default function HomeScreen() {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Search logic
   const searchCities = (text: string) => {
     setQuery(text);
     if (text.length < 2) return setResults([]);
@@ -56,7 +54,6 @@ export default function HomeScreen() {
     );
   };
 
-  // Map navigation
   const animateTo = (city: City, delta = 0.7, duration = 2000) => {
     const lat = parseFloat(city.lat);
     const lng = parseFloat(city.lng);
@@ -73,7 +70,6 @@ export default function HomeScreen() {
     setResults([]);
   };
 
-  // Determine nearest city
   const updateNearestCity = (lat: number, lng: number) => {
     let bestCity: City | null = null;
     let bestScore = Infinity;
@@ -91,7 +87,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 🌍 Main Map Display */}
+      {/* 🌍 Map */}
       <MapDisplay
         mapRef={mapRef}
         cities={cities}
@@ -104,7 +100,7 @@ export default function HomeScreen() {
         onRegionChangeComplete={(region: Region) => setRegion(region)}
       />
 
-      {/* 🔎 Top Bar Controls */}
+      {/* 🔎 Top Controls */}
       <TopControls
         navigation={navigation}
         query={query}
@@ -117,9 +113,10 @@ export default function HomeScreen() {
         setDropdownVisible={setDropdownVisible}
         results={results}
         flyToCity={flyToCity}
+        onFilterPress={() => setShowFilters(true)} // 👈 new prop hook-up
       />
 
-      {/* 🗺️ Layer Dropdown */}
+      {/* 🗺 Layer Dropdown */}
       <LayerDropdown
         visible={dropdownVisible}
         setVisible={setDropdownVisible}
@@ -128,7 +125,7 @@ export default function HomeScreen() {
         setLayer={setLayer}
       />
 
-      {/* 🏙️ City Info / Quick Nearest City */}
+      {/* 🏙 City Menu */}
       <CityMenu
         selectedCity={selectedCity}
         nearestCity={nearestCity}
@@ -143,16 +140,7 @@ export default function HomeScreen() {
         <Text style={styles.counterText}>Events: {events.length}</Text>
       </View>
 
-      {/* Filter Button */}
-      <TouchableOpacity
-        style={styles.filterButton}
-        onPress={() => setShowFilters(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.filterButtonText}>🔍 Filters</Text>
-      </TouchableOpacity>
-
-      {/* Filter Modal */}
+      {/* 🎛 Filter Modal */}
       <Modal
         visible={showFilters}
         animationType="slide"
@@ -172,7 +160,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* ⏳ Layer Timeline (Bottom Slider) */}
+      {/* ⏳ Timeline */}
       <LayerTimeline />
     </View>
   );
@@ -195,25 +183,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   counterText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  filterButton: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 40 : 20,
-    right: 20,
-    backgroundColor: '#4A90E2',
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  filterButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',

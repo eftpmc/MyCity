@@ -1,3 +1,4 @@
+import { useMapLayer } from '@/contexts/MapLayerContext';
 import { City, EonetGeometry } from '@/types';
 import { useMapLayer } from '@/contexts/MapLayerContext';
 import React from 'react';

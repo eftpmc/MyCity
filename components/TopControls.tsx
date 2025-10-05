@@ -1,6 +1,6 @@
 import { City } from '@/types';
 import { DrawerActions } from '@react-navigation/native';
-import { ChevronDown, Menu, Search, X } from 'lucide-react-native';
+import { ChevronDown, Filter, Menu, Search, X } from 'lucide-react-native';
 import React from 'react';
 import {
     FlatList,
@@ -20,6 +20,7 @@ interface Props {
   setDropdownVisible: (v: boolean) => void;
   results: City[];
   flyToCity: (c: City) => void;
+  onFilterPress?: () => void; // 🔍 new prop
 }
 
 export default function TopControls({
@@ -31,12 +32,13 @@ export default function TopControls({
   setDropdownVisible,
   results,
   flyToCity,
+  onFilterPress, // 🔍
 }: Props) {
   return (
     <>
-      {/* Top Bar */}
+      {/* 🔝 Top Controls Bar */}
       <View style={styles.topControls}>
-        {/* Hamburger */}
+        {/* 🍔 Drawer Toggle */}
         <TouchableOpacity
           style={styles.hamburger}
           onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
@@ -44,7 +46,7 @@ export default function TopControls({
           <Menu size={22} color="#fff" />
         </TouchableOpacity>
 
-        {/* Search Bar */}
+        {/* 🔍 Search Input */}
         <View style={styles.searchWrapper}>
           <Search size={20} color="#888" style={styles.searchIcon} />
           <TextInput
@@ -61,7 +63,7 @@ export default function TopControls({
           )}
         </View>
 
-        {/* Dropdown Trigger */}
+        {/* 🗺 Layer Dropdown */}
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setDropdownVisible(true)}
@@ -71,9 +73,18 @@ export default function TopControls({
           </Text>
           <ChevronDown size={18} color="#fff" style={{ marginLeft: 4 }} />
         </TouchableOpacity>
+
+        {/* 🎛 Filter Button */}
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={onFilterPress}
+          activeOpacity={0.8}
+        >
+          <Filter size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      {/* Search Results */}
+      {/* 📜 Search Results List */}
       {query.length > 0 && (
         <FlatList
           style={styles.resultsList}
@@ -142,6 +153,16 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   dropdownText: { color: '#fff', fontSize: 14 },
+
+  iconButton: {
+    width: 48,
+    height: 48,
+    marginLeft: 8,
+    borderRadius: 12,
+    backgroundColor: '#1c1c1e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   resultsList: {
     position: 'absolute',
