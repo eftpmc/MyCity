@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { useLocalSearchParams } from 'expo-router';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion/native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { VictoryAxis, VictoryChart, VictoryLine, VictoryTheme, VictoryTooltip } from 'victory-native';
 
 export default function CityReportsPage() {
   const { city } = useLocalSearchParams<{ city: string }>();
@@ -93,7 +93,7 @@ export default function CityReportsPage() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <motion.div
+        <motion.View
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -102,30 +102,49 @@ export default function CityReportsPage() {
           <Text style={styles.subtitle}>5-Day Temperature Forecast</Text>
 
           <View style={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={forecastData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" tick={{ fill: '#aaa' }} />
-                <YAxis tick={{ fill: '#aaa' }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111',
-                    borderColor: '#00ffcc',
-                    borderRadius: 8,
-                    color: '#fff',
-                  }}
-                />
-                <Line type="monotone" dataKey="min" stroke="#00bfff" strokeWidth={3} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="max" stroke="#ff6347" strokeWidth={3} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <VictoryChart theme={VictoryTheme.material} domainPadding={20}>
+              <VictoryAxis
+                tickValues={forecastData.map((data) => data.day)}
+                style={{
+                  tickLabels: { fill: '#aaa', fontSize: 12 },
+                  axis: { stroke: '#aaa' },
+                }}
+              />
+              <VictoryAxis
+                dependentAxis
+                style={{
+                  tickLabels: { fill: '#aaa', fontSize: 12 },
+                  axis: { stroke: '#aaa' },
+                }}
+              />
+              <VictoryLine
+                data={forecastData}
+                x="day"
+                y="min"
+                style={{
+                  data: { stroke: '#00bfff', strokeWidth: 3 },
+                }}
+                labels={({ datum }) => `${datum.min}°`}
+                labelComponent={<VictoryTooltip />}
+              />
+              <VictoryLine
+                data={forecastData}
+                x="day"
+                y="max"
+                style={{
+                  data: { stroke: '#ff6347', strokeWidth: 3 },
+                }}
+                labels={({ datum }) => `${datum.max}°`}
+                labelComponent={<VictoryTooltip />}
+              />
+            </VictoryChart>
           </View>
 
           <Text style={styles.legend}>
             <Text style={{ color: '#00bfff' }}>●</Text> Min Temp 
             <Text style={{ color: '#ff6347' }}>●</Text> Max Temp
           </Text>
-        </motion.div>
+        </motion.View>
       </ScrollView>
     </SafeAreaView>
   );
