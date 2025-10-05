@@ -122,9 +122,10 @@ const styles = StyleSheet.create({
   resultSubtitle: { color: '#9a9a9a', fontSize: 13, marginTop: 2 },
   quickResultWrap: {
     position: 'absolute',
-    top: 110,
     left: 20,
     right: 20,
-    zIndex: 2,
+    bottom: 48, // move near bottom like the selected city menu
+    alignItems: 'center',
+    zIndex: 3,
   },
 });

@@ -39,6 +39,7 @@ export default function MapDisplay({
     longitudeDelta: 15,
   });
   const [hasLocation, setHasLocation] = useState(false);
+  const [focusedCity, setFocusedCity] = useState<City | null>(null);
 
   // 🌍 Get user location on mount
   useEffect(() => {
@@ -98,7 +99,10 @@ export default function MapDisplay({
           setRegion(r);
           if (onRegionChangeComplete) onRegionChangeComplete(r);
         }}
-        onPress={onDeselectCity}
+        onPress={() => {
+          onDeselectCity();
+          setFocusedCity(null);
+        }}
       >
         <>
           {/* 🌋 EONET Natural Events */}
@@ -131,9 +135,10 @@ export default function MapDisplay({
                 latitude: parseFloat(city.lat),
                 longitude: parseFloat(city.lng),
               }}
-              title={city.city}
-              description={city.state_name}
-              onPress={() => onFlyToCity(city)}
+              onPress={() => {
+                setFocusedCity(city);
+                onFlyToCity(city);
+              }}
             />
           ))}
 
@@ -151,6 +156,24 @@ export default function MapDisplay({
           )}
         </>
       </MapView>
+
+      {/* Bottom city info card when a city is focused */}
+      {focusedCity && (
+        <View style={styles.cityInfoContainer} pointerEvents="box-none">
+          <View style={styles.cityInfoCard}>
+            <Text style={styles.cityInfoTitle}>{focusedCity.city}</Text>
+            <Text style={styles.cityInfoSubtitle}>
+              {focusedCity.state_name} ({focusedCity.state_id})
+            </Text>
+            <TouchableOpacity
+              onPress={() => setFocusedCity(null)}
+              style={{ marginTop: 8, alignSelf: 'center' }}
+            >
+              <Text style={{ color: '#9aa0a6', fontSize: 12 }}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* ➤ Recenter to user's location */}
       <TouchableOpacity
@@ -185,6 +208,28 @@ export default function MapDisplay({
 }
 
 const styles = RNStyleSheet.create({
+  cityInfoContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 16, // anchored at the bottom
+    alignItems: 'center',
+    zIndex: 6,
+  },
+  cityInfoCard: {
+    backgroundColor: 'rgba(20,20,20,0.95)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  cityInfoTitle: { color: '#fff', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  cityInfoSubtitle: { color: '#bdbdbd', fontSize: 12, marginTop: 4, textAlign: 'center' },
   recenterBtn: {
     position: 'absolute',
     right: 16,
