@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useEnvironmental } from '@/contexts/EnvironmentalContext';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -22,14 +22,23 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
 
   return (
     <View style={styles.container}>
-      {/* City Header */}
-      <View style={styles.cityHeader}>
-        <Text style={styles.cityHeaderTitle}>{cityName} Environmental Context</Text>
-        <Text style={styles.cityHeaderSubtitle}>Real-time data from NASA & EPA</Text>
+      {/* Simplified Header */}
+      <View style={styles.modernHeader}>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerSubtitle}>Environmental Report</Text>
+          <TouchableOpacity style={styles.refreshIconButton} onPress={refreshData}>
+            <Text style={styles.refreshIconText}>🔄</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.liveIndicatorHeader}>
+          <View style={styles.liveDotHeader} />
+          <Text style={styles.liveTextHeader}>Live Data • NASA & EPA</Text>
+        </View>
       </View>
 
       {/* Wellness Score Circle */}
       <View style={styles.scoreSection}>
+        <Text style={styles.scoreCityName}>{cityName}</Text>
         <Text style={styles.scoreLabel}>Overall Wellness Score</Text>
         
         <View style={styles.circleContainer}>
@@ -39,88 +48,98 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
           />
         </View>
 
-        <Text style={styles.description}>{data.wellnessDescription}</Text>
+        <Text style={styles.scoreDescription}>{data.wellnessDescription}</Text>
         <Text style={styles.lastUpdated}>
-          Last updated: {getTimeAgo(data.lastUpdated)}
+          Updated {getTimeAgo(data.lastUpdated)}
+          {data.isEstimated && (
+            <Text style={styles.estimatedIndicator}> • Estimated</Text>
+          )}
         </Text>
       </View>
 
-      {/* Report Description */}
-      {data.reportDescription && (
-        <View style={styles.reportSection}>
-          <View style={styles.reportHeader}>
-            <Text style={styles.reportIcon}>📋</Text>
-            <Text style={styles.reportTitle}>Report Description</Text>
-          </View>
-          <Text style={styles.reportText}>{data.reportDescription}</Text>
-          <Text style={styles.reportTimestamp}>
-            Reported: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </Text>
-        </View>
-      )}
-
-      {/* Environmental Context */}
-      <View style={styles.contextSection}>
-        <View style={styles.contextHeader}>
-          <Text style={styles.contextTitle}>Environmental Context</Text>
-          <View style={styles.nasaBadge}>
-            <Text style={styles.nasaText}>NASA Data</Text>
-          </View>
-        </View>
-
+      {/* Environmental Metrics - 3x2 Grid */}
+      <View style={styles.metricsSection}>
+        <Text style={styles.metricsSectionTitle}>Environmental Metrics</Text>
+        
         <View style={styles.metricsGrid}>
           {/* Air Quality Index */}
           <View style={[styles.metricCard, styles.aqiCard]}>
             <Text style={styles.metricIcon}>🌫️</Text>
-            <Text style={styles.metricLabel}>Air Quality Index</Text>
-            <Text style={[styles.metricValue, styles.aqiValue]}>
-              {data.aqi || '--'}
+            <Text style={styles.metricLabel}>Air Quality</Text>
+            <View style={styles.valueContainer}>
+              <Text style={[styles.metricValue, styles.aqiValue]}>
+                {data.aqi || '--'}
+              </Text>
+              <Text style={styles.metricUnit}>AQI</Text>
+            </View>
+            <Text style={styles.aqiCategory}>
+              {data.aqiCategory === 'Unhealthy for Sensitive Groups' ? 'SENSITIVE' :
+               data.aqiCategory === 'Unhealthy' ? 'UNHEALTHY' :
+               data.aqiCategory === 'Very Unhealthy' ? 'VERY UNHEALTHY' :
+               data.aqiCategory === 'Hazardous' ? 'HAZARDOUS' :
+               data.aqiCategory.toUpperCase()}
             </Text>
-            <Text style={styles.metricUnit}>AQI</Text>
-            <Text style={styles.aqiCategory}>{data.aqiCategory}</Text>
-          </View>
-
-          {/* Temperature */}
-          <View style={[styles.metricCard, styles.tempCard]}>
-            <Text style={styles.metricIcon}>🌡️</Text>
-            <Text style={styles.metricLabel}>Temperature</Text>
-            <Text style={[styles.metricValue, styles.tempValue]}>
-              {data.temperatureF ? data.temperatureF.toFixed(1) : '--'}
-            </Text>
-            <Text style={styles.metricUnit}>°F</Text>
           </View>
 
           {/* Humidity */}
           <View style={[styles.metricCard, styles.humidityCard]}>
             <Text style={styles.metricIcon}>💧</Text>
             <Text style={styles.metricLabel}>Humidity</Text>
-            <Text style={[styles.metricValue, styles.humidityValue]}>
-              {data.humidity ? data.humidity.toFixed(1) : '--'}
-            </Text>
-            <Text style={styles.metricUnit}>%</Text>
+            <View style={styles.valueContainer}>
+              <Text style={[styles.metricValue, styles.humidityValue]}>
+                {data.humidity ? data.humidity.toFixed(1) : '--'}
+              </Text>
+              <Text style={styles.metricUnit}>%</Text>
+            </View>
           </View>
 
           {/* Noise Level */}
           <View style={[styles.metricCard, styles.noiseCard]}>
             <Text style={styles.metricIcon}>🔊</Text>
             <Text style={styles.metricLabel}>Noise Level</Text>
-            <Text style={[styles.metricValue, styles.noiseValue]}>
-              {data.noiseLevel ? data.noiseLevel.toFixed(1) : '--'}
-            </Text>
-            <Text style={styles.metricUnit}>dB</Text>
+            <View style={styles.valueContainer}>
+              <Text style={[styles.metricValue, styles.noiseValue]}>
+                {data.noiseLevel ? data.noiseLevel.toFixed(1) : '--'}
+              </Text>
+              <Text style={styles.metricUnit}>dB</Text>
+            </View>
           </View>
 
           {/* Urban Heat Effect */}
-          {data.urbanHeatEffect !== null && (
-            <View style={[styles.metricCard, styles.heatCard]}>
-              <Text style={styles.metricIcon}>🏙️</Text>
-              <Text style={styles.metricLabel}>Urban Heat Effect</Text>
+          <View style={[styles.metricCard, styles.heatCard]}>
+            <Text style={styles.metricIcon}>🏙️</Text>
+            <Text style={styles.metricLabel}>Urban Heat</Text>
+            <View style={styles.valueContainer}>
               <Text style={[styles.metricValue, styles.heatValue]}>
-                +{data.urbanHeatEffect.toFixed(1)}
+                +{data.urbanHeatEffect ? data.urbanHeatEffect.toFixed(1) : '--'}
               </Text>
               <Text style={styles.metricUnit}>°C</Text>
             </View>
-          )}
+          </View>
+
+          {/* UV Index */}
+          <View style={[styles.metricCard, styles.uvCard]}>
+            <Text style={styles.metricIcon}>☀️</Text>
+            <Text style={styles.metricLabel}>UV Index</Text>
+            <View style={styles.valueContainer}>
+              <Text style={[styles.metricValue, styles.uvValue]}>
+                {data.uvIndex ? data.uvIndex.toFixed(1) : '--'}
+              </Text>
+              <Text style={styles.metricUnit}>UV</Text>
+            </View>
+          </View>
+
+          {/* Wind Speed */}
+          <View style={[styles.metricCard, styles.windCard]}>
+            <Text style={styles.metricIcon}>💨</Text>
+            <Text style={styles.metricLabel}>Wind Speed</Text>
+            <View style={styles.valueContainer}>
+              <Text style={[styles.metricValue, styles.windValue]}>
+                {data.windSpeed ? data.windSpeed.toFixed(1) : '--'}
+              </Text>
+              <Text style={styles.metricUnit}>mph</Text>
+            </View>
+          </View>
         </View>
 
         {/* Data Correlation Badge */}
@@ -139,6 +158,20 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
           <Text style={styles.refreshText}>🔄 Refresh Data</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Report Description */}
+      {data.reportDescription && (
+        <View style={styles.reportSection}>
+          <View style={styles.reportHeader}>
+            <Text style={styles.reportIcon}>📋</Text>
+            <Text style={styles.reportTitle}>Report Description</Text>
+          </View>
+          <Text style={styles.reportText}>{data.reportDescription}</Text>
+          <Text style={styles.reportTimestamp}>
+            Reported: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -149,16 +182,16 @@ interface WellnessCircleProps {
 }
 
 function WellnessCircle({ score, change }: WellnessCircleProps) {
-  const size = 200;
-  const strokeWidth = 16;
+  const size = 220;
+  const strokeWidth = 18;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const progress = (score / 100) * circumference;
 
   const getColor = (score: number) => {
-    if (score >= 80) return '#4CAF50';
+    if (score >= 80) return '#00FF88';
     if (score >= 60) return '#FFC107';
-    return '#FF5722';
+    return '#FF6B6B';
   };
 
   const color = getColor(score);
@@ -171,7 +204,7 @@ function WellnessCircle({ score, change }: WellnessCircleProps) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E0E0E0"
+          stroke="#2A2A2A"
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -190,8 +223,8 @@ function WellnessCircle({ score, change }: WellnessCircleProps) {
       </Svg>
       
       <View style={styles.circleContent}>
-        <Text style={[styles.scoreNumber, { color }]}>{score}</Text>
-        <Text style={[styles.changeText, { color: change >= 0 ? '#4CAF50' : '#FF5722' }]}>
+        <Text style={[styles.circleScoreNumber, { color }]}>{score}</Text>
+        <Text style={[styles.circleChangeText, { color: change >= 0 ? '#00FF88' : '#FF6B6B' }]}>
           {change >= 0 ? '↗' : '↘'} {Math.abs(change).toFixed(1)}
         </Text>
       </View>
@@ -202,31 +235,119 @@ function WellnessCircle({ score, change }: WellnessCircleProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#0A0A0A',
   },
-  cityHeader: {
-    backgroundColor: '#2196F3',
-    padding: 20,
-    paddingTop: 12,
+  modernHeader: {
+    backgroundColor: '#0A0A0A',
+    paddingHorizontal: 20,
+    paddingTop: 70,
     paddingBottom: 16,
   },
-  cityHeaderTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  cityHeaderSubtitle: {
+  headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#888888',
     fontWeight: '500',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  refreshIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshIconText: {
+    fontSize: 18,
+  },
+  liveIndicatorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  liveDotHeader: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00FF88',
+  },
+  liveTextHeader: {
+    fontSize: 12,
+    color: '#00FF88',
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  scoreSection: {
+    backgroundColor: '#0A0A0A',
+    padding: 24,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  scoreCityName: {
+    fontSize: 26,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  scoreLabel: {
+    fontSize: 14,
+    color: '#888888',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 24,
+  },
+  circleContainer: {
+    marginVertical: 20,
+  },
+  circleContent: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  circleScoreNumber: {
+    fontSize: 64,
+    fontWeight: '800',
+  },
+  circleChangeText: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  scoreDescription: {
+    fontSize: 15,
+    color: '#AAAAAA',
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 22,
+  },
+  lastUpdated: {
+    fontSize: 13,
+    color: '#666666',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  estimatedIndicator: {
+    color: '#FFA500',
+    fontWeight: '600',
   },
   reportSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E1E1E',
+    margin: 20,
+    marginTop: 0,
     padding: 20,
-    marginBottom: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   reportHeader: {
     flexDirection: 'row',
@@ -240,17 +361,17 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#212121',
+    color: '#FFFFFF',
   },
   reportText: {
     fontSize: 15,
     lineHeight: 24,
-    color: '#424242',
+    color: '#CCCCCC',
     marginBottom: 12,
   },
   reportTimestamp: {
     fontSize: 13,
-    color: '#757575',
+    color: '#666666',
     fontStyle: 'italic',
   },
   inlineLoader: {
@@ -272,190 +393,166 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#0A0A0A',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: '#666',
   },
-  scoreSection: {
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  scoreLabel: {
-    fontSize: 18,
-    color: '#757575',
-    marginBottom: 24,
-  },
-  circleContainer: {
-    marginVertical: 20,
-  },
-  circleContent: {
-    position: 'absolute',
-    alignItems: 'center',
-  },
-  scoreNumber: {
-    fontSize: 64,
-    fontWeight: '700',
-  },
-  changeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  description: {
-    fontSize: 16,
-    color: '#616161',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  lastUpdated: {
-    fontSize: 14,
-    color: '#9E9E9E',
-    marginTop: 8,
-  },
-  contextSection: {
+  metricsSection: {
     padding: 20,
+    paddingTop: 0,
+    backgroundColor: '#0A0A0A',
   },
-  contextHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  contextTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  nasaBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  nasaText: {
-    fontSize: 12,
+  metricsSectionTitle: {
+    fontSize: 14,
+    color: '#888888',
     fontWeight: '600',
-    color: '#4CAF50',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
+    gap: 8,
+    justifyContent: 'space-between',
   },
   metricCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    minHeight: 140,
+    width: '31%',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 120,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   aqiCard: {
-    backgroundColor: '#FFEBEE',
-    borderColor: '#FFCDD2',
-  },
-  tempCard: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#C8E6C9',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B6B',
   },
   humidityCard: {
-    backgroundColor: '#FFF3E0',
-    borderColor: '#FFE0B2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#54A0FF',
   },
   noiseCard: {
-    backgroundColor: '#FCE4EC',
-    borderColor: '#F8BBD0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#A55EEA',
   },
   heatCard: {
-    backgroundColor: '#FFF9C4',
-    borderColor: '#FFF59D',
-    width: '100%',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFA502',
+  },
+  uvCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  windCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#87CEEB',
   },
   metricIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: 20,
+    marginBottom: 6,
   },
   metricLabel: {
-    fontSize: 13,
-    color: '#757575',
-    marginBottom: 8,
+    fontSize: 10,
+    color: '#888888',
+    marginBottom: 4,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  valueContainer: {
+    alignItems: 'center',
+    marginBottom: 2,
   },
   metricValue: {
-    fontSize: 36,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 4,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   aqiValue: {
-    color: '#D32F2F',
-  },
-  tempValue: {
-    color: '#388E3C',
+    color: '#FF6B6B',
   },
   humidityValue: {
-    color: '#F57C00',
+    color: '#54A0FF',
   },
   noiseValue: {
-    color: '#C2185B',
+    color: '#A55EEA',
   },
   heatValue: {
-    color: '#F9A825',
+    color: '#FFA502',
+  },
+  uvValue: {
+    color: '#FFD700',
+  },
+  windValue: {
+    color: '#87CEEB',
   },
   metricUnit: {
-    fontSize: 14,
-    color: '#9E9E9E',
+    fontSize: 10,
+    color: '#666666',
     fontWeight: '600',
+    textAlign: 'center',
   },
   aqiCategory: {
-    fontSize: 11,
-    color: '#D32F2F',
+    fontSize: 8,
+    color: '#FF6B6B',
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 2,
     textTransform: 'uppercase',
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   correlationBadge: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#C8E6C9',
-    marginBottom: 16,
+    borderColor: '#2A2A2A',
+    marginTop: 12,
   },
   checkmark: {
     fontSize: 24,
-    color: '#4CAF50',
+    color: '#00FF88',
     marginRight: 12,
   },
   correlationText: {
     flex: 1,
   },
   correlationTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   correlationSubtitle: {
-    fontSize: 13,
-    color: '#558B2F',
+    fontSize: 12,
+    color: '#888888',
   },
   refreshButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#2A2A2A',
     borderRadius: 12,
-    padding: 14,
+    padding: 16,
     alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
   },
   refreshText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#00FF88',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });
 

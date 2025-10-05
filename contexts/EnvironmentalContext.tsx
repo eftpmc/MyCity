@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { AppState } from 'react-native';
 import axios from 'axios';
 
 // Types
 export interface EnvironmentalData {
+  cityName: string | null;
   aqi: number | null;
   aqiCategory: string;
   temperature: number | null;
@@ -10,6 +12,9 @@ export interface EnvironmentalData {
   humidity: number | null;
   noiseLevel: number | null;
   urbanHeatEffect: number | null;
+  uvIndex: number | null;
+  windSpeed: number | null;
+  windDirection: number | null;
   wellnessScore: number | null;
   wellnessChange: number;
   wellnessDescription: string;
@@ -17,6 +22,7 @@ export interface EnvironmentalData {
   lastUpdated: Date | null;
   loading: boolean;
   error: string | null;
+  isEstimated: boolean; // Track if showing estimated data
 }
 
 interface EnvironmentalContextType {
@@ -26,6 +32,7 @@ interface EnvironmentalContextType {
 }
 
 const defaultData: EnvironmentalData = {
+  cityName: null,
   aqi: null,
   aqiCategory: 'Unknown',
   temperature: null,
@@ -33,6 +40,9 @@ const defaultData: EnvironmentalData = {
   humidity: null,
   noiseLevel: null,
   urbanHeatEffect: null,
+  uvIndex: null,
+  windSpeed: null,
+  windDirection: null,
   wellnessScore: null,
   wellnessChange: 0,
   wellnessDescription: 'Loading environmental data...',
@@ -40,6 +50,7 @@ const defaultData: EnvironmentalData = {
   lastUpdated: null,
   loading: false,
   error: null,
+  isEstimated: false,
 };
 
 const EnvironmentalContext = createContext<EnvironmentalContextType | undefined>(undefined);
@@ -64,6 +75,9 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
       let aqi = estimateAQI(lat, lon);
       let aqiCategory = getAQICategory(aqi);
       let noiseLevel = estimateNoiseLevel(lat, lon, cityName);
+      let uvIndex = estimateUVIndex(lat, lon);
+      let windSpeed = estimateWindSpeed(lat, lon);
+      let windDirection = estimateWindDirection();
       
       // Set estimated data IMMEDIATELY (non-blocking)
       const estimatedWellnessScore = calculateWellnessScore({
@@ -74,7 +88,7 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       
       // Generate report description
-      const reportDescription = generateReportDescription(cityName, { aqi, temperatureF, humidity, noiseLevel });
+      const reportDescription = generateReportDescription(cityName, { aqi, temperatureF: tempF || 70, humidity, noiseLevel });
       
       console.log('[Environmental] 📊 Setting estimated data:', {
         aqi,
@@ -86,6 +100,7 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       
       setData({
+        cityName,
         aqi,
         aqiCategory,
         temperature: tempC,
@@ -93,6 +108,9 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
         humidity,
         noiseLevel,
         urbanHeatEffect,
+        uvIndex,
+        windSpeed,
+        windDirection,
         wellnessScore: estimatedWellnessScore,
         wellnessChange: 0,
         wellnessDescription: 'Loading live data...',
@@ -100,33 +118,67 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
         lastUpdated: new Date(),
         loading: false, // Don't block UI
         error: null,
+        isEstimated: true, // Mark as estimated data
       });
       
       console.log('[Environmental] ✅ Estimated data set, now fetching live data...');
 
       // Now fetch live data in the background (non-blocking)
-      const today = new Date();
-      const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-
-      // 1. Try to Fetch Temperature & Humidity from NASA POWER API (with timeout)
+      
+      // 1. Fetch REAL-TIME current weather from Open-Meteo (free, no API key)
       try {
-        const nasaPowerUrl = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,RH2M,T2M_MAX,T2M_MIN&community=RE&longitude=${lon}&latitude=${lat}&start=${dateStr}&end=${dateStr}&format=JSON`;
+        const openMeteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code&temperature_unit=fahrenheit&timezone=auto`;
         
-        console.log('[Environmental] Fetching NASA POWER data...');
-        const nasaResponse = await axios.get(nasaPowerUrl, { timeout: 5000 });
-        const nasaData = nasaResponse.data?.properties?.parameter;
+        console.log('[Environmental] Fetching real-time weather from Open-Meteo...');
+        const weatherResponse = await axios.get(openMeteoUrl, { timeout: 5000 });
+        const currentWeather = weatherResponse.data?.current;
 
-        if (nasaData?.T2M?.[dateStr]) {
-          tempC = nasaData.T2M[dateStr];
-          tempF = tempC ? (tempC * 9/5) + 32 : null;
-          humidity = nasaData?.RH2M?.[dateStr] || humidity;
-          maxTempC = nasaData?.T2M_MAX?.[dateStr] || maxTempC;
-          minTempC = nasaData?.T2M_MIN?.[dateStr] || minTempC;
-          urbanHeatEffect = maxTempC && tempC ? maxTempC - tempC : urbanHeatEffect;
-          console.log('[Environmental] ✅ NASA POWER data received');
+        if (currentWeather) {
+          // Get REAL-TIME current temperature
+          tempF = currentWeather.temperature_2m;
+          tempC = tempF !== null ? (tempF - 32) * 5/9 : null;
+          humidity = currentWeather.relative_humidity_2m;
+          
+          // Get UV Index and Wind data from Open-Meteo
+          uvIndex = currentWeather.uv_index || estimateUVIndex(lat, lon);
+          windSpeed = currentWeather.wind_speed_10m || estimateWindSpeed(lat, lon);
+          windDirection = currentWeather.wind_direction_10m || estimateWindDirection();
+          
+          console.log('[Environmental] ✅ Real-time weather:', {
+            tempF,
+            tempC,
+            humidity,
+            uvIndex,
+            windSpeed,
+            windDirection,
+            weatherCode: currentWeather.weather_code
+          });
         }
-      } catch (nasaError) {
-        console.warn('[Environmental] NASA POWER unavailable, keeping estimates');
+      } catch (weatherError) {
+        console.warn('[Environmental] Open-Meteo unavailable, trying NASA fallback...');
+        
+        // Fallback to NASA POWER for daily averages if real-time fails
+        try {
+          const today = new Date();
+          const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+          const nasaPowerUrl = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,RH2M,T2M_MAX,T2M_MIN&community=RE&longitude=${lon}&latitude=${lat}&start=${dateStr}&end=${dateStr}&format=JSON`;
+          
+          console.log('[Environmental] Fetching NASA POWER data as fallback...');
+          const nasaResponse = await axios.get(nasaPowerUrl, { timeout: 5000 });
+          const nasaData = nasaResponse.data?.properties?.parameter;
+
+          if (nasaData?.T2M?.[dateStr]) {
+            tempC = nasaData.T2M[dateStr];
+            tempF = tempC ? (tempC * 9/5) + 32 : null;
+            humidity = nasaData?.RH2M?.[dateStr] || humidity;
+            maxTempC = nasaData?.T2M_MAX?.[dateStr] || maxTempC;
+            minTempC = nasaData?.T2M_MIN?.[dateStr] || minTempC;
+            urbanHeatEffect = maxTempC && tempC ? maxTempC - tempC : urbanHeatEffect;
+            console.log('[Environmental] ✅ NASA POWER fallback data received');
+          }
+        } catch (nasaError) {
+          console.warn('[Environmental] NASA POWER also unavailable, using estimates');
+        }
       }
 
       // 2. Fetch Air Quality (with timeout)
@@ -164,10 +216,11 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
       const liveWellnessDescription = getWellnessDescription(liveWellnessScore);
 
       // Generate live report description
-      const liveReportDescription = generateReportDescription(cityName, { aqi, temperatureF, humidity, noiseLevel });
+      const liveReportDescription = generateReportDescription(cityName, { aqi, temperatureF: tempF || 70, humidity, noiseLevel });
       
       // Update with live data
       setData({
+        cityName,
         aqi,
         aqiCategory,
         temperature: tempC,
@@ -175,6 +228,9 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
         humidity,
         noiseLevel,
         urbanHeatEffect,
+        uvIndex,
+        windSpeed,
+        windDirection,
         wellnessScore: liveWellnessScore,
         wellnessChange,
         wellnessDescription: liveWellnessDescription,
@@ -182,6 +238,7 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
         lastUpdated: new Date(),
         loading: false,
         error: null,
+        isEstimated: false, // Mark as live data
       });
 
       console.log('[Environmental] ✅ Live data updated successfully');
@@ -201,6 +258,7 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       
       setData({
+        cityName,
         aqi: fallbackAqi,
         aqiCategory: getAQICategory(fallbackAqi),
         temperature: estimateTemperature(lat, lon),
@@ -208,6 +266,9 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
         humidity: fallbackHumidity,
         noiseLevel: fallbackNoise,
         urbanHeatEffect: 3.5,
+        uvIndex: estimateUVIndex(lat, lon),
+        windSpeed: estimateWindSpeed(lat, lon),
+        windDirection: estimateWindDirection(),
         wellnessScore: 72,
         wellnessChange: 0,
         wellnessDescription: 'Using estimated data due to connectivity issues',
@@ -215,6 +276,7 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
         lastUpdated: new Date(),
         loading: false,
         error: 'Using estimated data',
+        isEstimated: true, // Mark as estimated data
       });
     }
   };
@@ -225,12 +287,25 @@ export const EnvironmentalProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Auto-refresh every 30 minutes
+  // Auto-refresh every 5 minutes for more frequent updates
   useEffect(() => {
     if (currentCity) {
-      const interval = setInterval(refreshData, 30 * 60 * 1000);
+      const interval = setInterval(refreshData, 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
+  }, [currentCity]);
+
+  // Refresh data when app comes to foreground
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active' && currentCity) {
+        console.log('[Environmental] 🔄 App became active, refreshing data...');
+        refreshData();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
   }, [currentCity]);
 
   return (
@@ -271,27 +346,49 @@ function getAQICategory(aqi: number | null): string {
 }
 
 function estimateTemperature(lat: number, lon: number): number {
-  // Estimate temperature based on latitude (simplified)
+  // More realistic temperature estimation to reduce flicker
   const month = new Date().getMonth(); // 0-11
+  const hour = new Date().getHours();
   const isWinter = month >= 11 || month <= 2;
   const isSummer = month >= 5 && month <= 8;
   
-  // Base temperature on latitude
-  const latTemp = 30 - (Math.abs(lat - 25) * 0.5);
+  // Base temperature on latitude (more conservative)
+  let latTemp = 25 - (Math.abs(lat - 30) * 0.4);
   
-  if (isWinter) return latTemp - 10;
-  if (isSummer) return latTemp + 10;
-  return latTemp;
+  // Seasonal adjustment (smaller range)
+  if (isWinter) latTemp -= 8;
+  else if (isSummer) latTemp += 5;
+  
+  // Time of day adjustment (cooler at night)
+  if (hour >= 22 || hour <= 6) latTemp -= 2;
+  else if (hour >= 12 && hour <= 16) latTemp += 1;
+  
+  // Much smaller random variation to reduce flicker
+  const variation = (Math.random() - 0.5) * 3; // ±1.5°C instead of large variations
+  
+  return Math.round((latTemp + variation) * 10) / 10;
 }
 
 function estimateHumidity(lat: number, lon: number): number {
-  // Coastal areas have higher humidity
+  // More realistic humidity estimation to reduce flicker
   const isCoastal = lon < -100 || lon > -80; // East or West coast
   const isSouth = lat < 35;
+  const hour = new Date().getHours();
   
-  if (isCoastal && isSouth) return 70 + Math.random() * 10; // 70-80%
-  if (isCoastal) return 60 + Math.random() * 10; // 60-70%
-  return 40 + Math.random() * 20; // 40-60%
+  let baseHumidity = 50; // Default
+  
+  if (isCoastal && isSouth) baseHumidity = 75; // High humidity coastal south
+  else if (isCoastal) baseHumidity = 65; // Moderate coastal
+  else if (isSouth) baseHumidity = 60; // Southern inland
+  
+  // Time of day adjustment (higher humidity at night)
+  if (hour >= 22 || hour <= 6) baseHumidity += 5;
+  else if (hour >= 12 && hour <= 16) baseHumidity -= 3;
+  
+  // Smaller random variation to reduce flicker
+  const variation = (Math.random() - 0.5) * 8; // ±4% instead of large ranges
+  
+  return Math.round((baseHumidity + variation) * 10) / 10;
 }
 
 function estimateAQI(lat: number, lon: number): number {
@@ -312,6 +409,39 @@ function estimateNoiseLevel(lat: number, lon: number, cityName: string): number 
   
   if (isLargeCity) return Math.floor(Math.random() * 10) + 70; // 70-80 dB
   return Math.floor(Math.random() * 10) + 55; // 55-65 dB
+}
+
+function estimateUVIndex(lat: number, lon: number): number {
+  // UV index is higher closer to equator and during summer
+  const currentMonth = new Date().getMonth();
+  const isSummer = currentMonth >= 5 && currentMonth <= 8; // June-September
+  
+  // Base UV based on latitude (closer to equator = higher UV)
+  const baseUV = Math.max(1, 11 - Math.abs(lat) * 0.15);
+  
+  // Seasonal adjustment
+  const seasonalAdjustment = isSummer ? 1.3 : 0.7;
+  
+  return Math.min(11, Math.round(baseUV * seasonalAdjustment * 10) / 10);
+}
+
+function estimateWindSpeed(lat: number, lon: number): number {
+  // Wind speed varies by location and season
+  const currentMonth = new Date().getMonth();
+  const isWinter = currentMonth >= 11 || currentMonth <= 2; // Dec-Feb
+  
+  // Coastal areas tend to be windier
+  const isCoastal = Math.abs(lon) > 100 || (lat > 25 && lat < 50 && Math.abs(lon) > 80);
+  
+  const baseWind = isCoastal ? 8 + Math.random() * 6 : 4 + Math.random() * 4;
+  const seasonalAdjustment = isWinter ? 1.2 : 0.9;
+  
+  return Math.round(baseWind * seasonalAdjustment * 10) / 10;
+}
+
+function estimateWindDirection(): number {
+  // Random wind direction in degrees
+  return Math.floor(Math.random() * 360);
 }
 
 function calculateWellnessScore(factors: {

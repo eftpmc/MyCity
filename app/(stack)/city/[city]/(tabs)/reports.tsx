@@ -14,42 +14,93 @@ const usCities = usCitiesData as Array<{
 }>;
 
 export default function CityReportsPage() {
-  const { city } = useLocalSearchParams<{ city: string }>();
-  const { fetchEnvironmentalData } = useEnvironmental();
+  const params = useLocalSearchParams();
+  
+  // Extract city name with robust handling - the city param is the city name string
+  const cityName = Array.isArray(params.city) ? params.city[0] : params.city;
+  const stateId = Array.isArray(params.state_id) ? params.state_id[0] : params.state_id;
+  
+  console.log('[Reports] 🔍 Raw params:', params);
+  console.log('[Reports] 🔍 City name:', cityName);
+  console.log('[Reports] 🔍 State ID:', stateId);
+  console.log('[Reports] 🔍 All param keys:', Object.keys(params));
+  
+  const { fetchEnvironmentalData, data: envData } = useEnvironmental();
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (!city || isInitialized) return;
+    if (!cityName || isInitialized) return;
     
-    console.log('[Reports] 🔍 Looking up coordinates for:', city);
+    console.log('[Reports] 🔍 Looking up coordinates for:', cityName);
     
-    // Find city in local JSON data (instant lookup)
+    // First, try to use coordinates from params if available (from navigation)
+    const paramLat = Array.isArray(params.lat) ? params.lat[0] : params.lat;
+    const paramLng = Array.isArray(params.lng) ? params.lng[0] : params.lng;
+    
+    if (paramLat && paramLng) {
+      const lat = parseFloat(paramLat);
+      const lon = parseFloat(paramLng);
+      
+      console.log('[Reports] ✅ Using coordinates from params:', lat, lon);
+      
+      // Fetch environmental data (async, happens in background)
+      fetchEnvironmentalData(cityName, lat, lon);
+      setIsInitialized(true);
+      return;
+    }
+    
+    // Fallback: Find city in local JSON data (instant lookup)
     const cityData = usCities.find((c) => 
-      c.city.toLowerCase() === (city as string).toLowerCase()
+      c.city.toLowerCase() === cityName.toLowerCase()
     );
 
     if (cityData) {
       const lat = parseFloat(cityData.lat);
       const lon = parseFloat(cityData.lng);
       
-      console.log('[Reports] ✅ Found coordinates:', lat, lon);
+      console.log('[Reports] ✅ Found coordinates in local data:', lat, lon);
       
       // Fetch environmental data (async, happens in background)
-      fetchEnvironmentalData(city as string, lat, lon);
+      fetchEnvironmentalData(cityName, lat, lon);
       setIsInitialized(true);
     } else {
       console.warn('[Reports] ⚠️ City not found, using default coordinates');
       // Use center of US as fallback
-      fetchEnvironmentalData(city as string, 39.8283, -98.5795);
+      fetchEnvironmentalData(cityName, 39.8283, -98.5795);
       setIsInitialized(true);
     }
-  }, [city, isInitialized, fetchEnvironmentalData]);
+  }, [cityName, isInitialized, fetchEnvironmentalData, params.lat, params.lng]);
 
+  // Determine the display city name with multiple fallbacks
+  let displayCityName = cityName || 'Loading...';
+  
+  // Additional fallback: try to extract from any available param
+  if (displayCityName === 'Loading...' && params) {
+    // Try different possible parameter names
+    const possibleNames = ['city', 'cityName', 'name', 'title'];
+    for (const key of possibleNames) {
+      const value = Array.isArray(params[key]) ? params[key][0] : params[key];
+      if (value && typeof value === 'string' && value !== 'Loading...') {
+        displayCityName = value;
+        console.log('[Reports] 🔄 Found city name in param:', key, '=', value);
+        break;
+      }
+    }
+  }
+  
+  // Final fallback: use the city name from environmental data if available
+  if (displayCityName === 'Loading...' && envData && envData.cityName) {
+    displayCityName = envData.cityName;
+    console.log('[Reports] 🔄 Using city name from environmental data:', envData.cityName);
+  }
+  
+  console.log('[Reports] 🎯 Final display city name:', displayCityName);
+  
   // Always render the dashboard immediately
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <EnvironmentalDashboard cityName={city as string} />
+        <EnvironmentalDashboard cityName={displayCityName} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -58,7 +109,7 @@ export default function CityReportsPage() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#0A0A0A',
   },
   scrollView: {
     flex: 1,
