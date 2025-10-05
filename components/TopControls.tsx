@@ -3,12 +3,13 @@ import { DrawerActions } from '@react-navigation/native';
 import { ChevronDown, Filter, Menu, Search, X } from 'lucide-react-native';
 import React from 'react';
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 
 interface Props {
@@ -20,7 +21,7 @@ interface Props {
   setDropdownVisible: (v: boolean) => void;
   results: City[];
   flyToCity: (c: City) => void;
-  onFilterPress?: () => void; // 🔍 new prop
+  onFilterPress?: () => void;
 }
 
 export default function TopControls({
@@ -32,59 +33,95 @@ export default function TopControls({
   setDropdownVisible,
   results,
   flyToCity,
-  onFilterPress, // 🔍
+  onFilterPress,
 }: Props) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 600; // stack for narrow screens
+
   return (
     <>
-      {/* 🔝 Top Controls Bar */}
-      <View style={styles.topControls}>
-        {/* 🍔 Drawer Toggle */}
-        <TouchableOpacity
-          style={styles.hamburger}
-          onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+      <View style={[styles.topControls, isCompact && { flexDirection: 'column' }]}>
+        {/* MAIN ROW (menu + search + buttons on large screens) */}
+        <View
+          style={[
+            styles.mainRow,
+            isCompact && { flexDirection: 'column', alignItems: 'stretch' },
+          ]}
         >
-          <Menu size={22} color="#fff" />
-        </TouchableOpacity>
+          {/* 🍔 Drawer */}
+          <TouchableOpacity
+            style={styles.hamburger}
+            onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+          >
+            <Menu size={22} color="#fff" />
+          </TouchableOpacity>
 
-        {/* 🔍 Search Input */}
-        <View style={styles.searchWrapper}>
-          <Search size={20} color="#888" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for a city"
-            placeholderTextColor="#888"
-            value={query}
-            onChangeText={searchCities}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <X size={20} color="#888" />
-            </TouchableOpacity>
+          {/* 🔍 Search */}
+          <View style={[styles.searchWrapper, isCompact && { flex: 1, marginRight: 0 }]}>
+            <Search size={20} color="#888" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for a city"
+              placeholderTextColor="#888"
+              value={query}
+              onChangeText={searchCities}
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <X size={20} color="#888" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Only show buttons inline on large screens */}
+          {!isCompact && (
+            <>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setDropdownVisible(true)}
+              >
+                <Text style={styles.dropdownText}>
+                  {activeLayer?.name || 'No Layer'}
+                </Text>
+                <ChevronDown size={18} color="#fff" style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={onFilterPress}
+                activeOpacity={0.8}
+              >
+                <Filter size={20} color="#fff" />
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
-        {/* 🗺 Layer Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => setDropdownVisible(true)}
-        >
-          <Text style={styles.dropdownText}>
-            {activeLayer?.name || 'No Layer'}
-          </Text>
-          <ChevronDown size={18} color="#fff" style={{ marginLeft: 4 }} />
-        </TouchableOpacity>
+        {/* On small screens → buttons go to a new row */}
+        {isCompact && (
+          <View style={styles.secondRow}>
+            <TouchableOpacity
+              style={[styles.dropdownButton, { flex: 1, marginLeft: 0 }]}
+              onPress={() => setDropdownVisible(true)}
+            >
+              <Text style={styles.dropdownText}>
+                {activeLayer?.name || 'No Layer'}
+              </Text>
+              <ChevronDown size={18} color="#fff" style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
 
-        {/* 🎛 Filter Button */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={onFilterPress}
-          activeOpacity={0.8}
-        >
-          <Filter size={20} color="#fff" />
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconButton, { marginLeft: 8 }]}
+              onPress={onFilterPress}
+              activeOpacity={0.8}
+            >
+              <Filter size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
-      {/* 📜 Search Results List */}
+      {/* 📜 Search Results */}
       {query.length > 0 && (
         <FlatList
           style={styles.resultsList}
@@ -115,9 +152,16 @@ const styles = StyleSheet.create({
     top: 50,
     left: 20,
     right: 20,
+    zIndex: 2,
+  },
+  mainRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 2,
+  },
+  secondRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
   },
 
   hamburger: {

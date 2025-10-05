@@ -1,13 +1,13 @@
 import React from 'react';
 import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
   Linking,
+  Modal,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { getCategoryConfig } from './eventCategoryConfig';
 

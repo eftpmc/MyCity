@@ -2,7 +2,7 @@
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Tabs, useLocalSearchParams } from "expo-router";
-import { Globe, Home } from "lucide-react-native";
+import { Home, Info } from "lucide-react-native";
 import React from "react";
 
 export default function CityTabsLayout() {
@@ -27,8 +27,8 @@ export default function CityTabsLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          title: "Reports",
-          tabBarIcon: ({ color, size }) => <Globe color={color} size={size} />,
+          title: "Wellness",
+          tabBarIcon: ({ color, size }) => <Info color={color} size={size} />,
         }}
       />
     </Tabs>

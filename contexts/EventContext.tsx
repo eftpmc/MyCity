@@ -1,19 +1,26 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type EonetGeometry = { 
-  date: string; 
-  type: 'Point' | string; 
-  coordinates: [number, number] 
+export type EonetGeometry = {
+  date: string;
+  type: "Point" | string;
+  coordinates: [number, number];
 };
 
-export type EonetCategory = { 
-  id: number; 
-  title: string; 
-  slug: string 
+export type EonetCategory = {
+  id: number;
+  title: string;
+  slug: string;
 };
 
 export interface EonetEvent {
@@ -24,20 +31,20 @@ export interface EonetEvent {
   geometry: EonetGeometry[];
 }
 
-export type EventQuery = { 
-  start: string; 
-  end: string; 
-  categories: string[]; 
-  bbox?: [number, number, number, number]; 
-  status?: 'open' | 'closed' | 'all'; 
-  limit?: number; 
+export type EventQuery = {
+  start: string;
+  end: string;
+  categories: string[];
+  bbox?: [number, number, number, number];
+  status?: "open" | "closed" | "all";
+  limit?: number;
 };
 
-export type FilterState = { 
-  start: string; 
-  end: string; 
-  categories: string[]; 
-  viewportOnly: boolean; 
+export type FilterState = {
+  start: string;
+  end: string;
+  categories: string[];
+  viewportOnly?: boolean; // optional for backward compatibility
 };
 
 export type Region = {
@@ -71,7 +78,7 @@ export const CATEGORY_MAP: Record<string, string> = {
   "Volcanoes": "volcanoes",
   "Water Color": "waterColor",
   "Floods": "floods",
-  "Wildfires": "wildfires"
+  "Wildfires": "wildfires",
 };
 
 export const DEFAULT_CATS = Object.values(CATEGORY_MAP);
@@ -90,22 +97,21 @@ export function regionToBbox(r: Region): [number, number, number, number] {
 
 function buildUrl(q: EventQuery, pageUrl?: string): string {
   if (pageUrl) return pageUrl;
-  
-  const u = new URL('https://eonet.gsfc.nasa.gov/api/v3/events');
-  u.searchParams.set('status', q.status || 'all');
-  u.searchParams.set('start', q.start);
-  u.searchParams.set('end', q.end);
-  
+
+  const u = new URL("https://eonet.gsfc.nasa.gov/api/v3/events");
+  u.searchParams.set("status", q.status || "all");
+  u.searchParams.set("start", q.start);
+  u.searchParams.set("end", q.end);
+
   if (q.categories.length) {
-    u.searchParams.set('category', q.categories.join(','));
+    u.searchParams.set("category", q.categories.join(","));
   }
-  
+
   if (q.bbox) {
-    u.searchParams.set('bbox', q.bbox.join(','));
+    u.searchParams.set("bbox", q.bbox.join(","));
   }
-  
-  u.searchParams.set('limit', String(q.limit || 100));
-  
+
+  u.searchParams.set("limit", String(q.limit || 100));
   return u.toString();
 }
 
@@ -115,24 +121,23 @@ async function fetchEventsAPI(q: EventQuery): Promise<EonetEvent[]> {
   let pageCount = 0;
   const maxPages = 3;
 
-  console.log('[EONET] Fetching events:', nextUrl);
+  console.log("[EONET] Fetching events:", nextUrl);
 
   while (nextUrl && pageCount < maxPages) {
-    const response: Response = await fetch(nextUrl);
-    
+    const response = await fetch(nextUrl);
+
     if (!response.ok) {
       throw new Error(`EONET API error: ${response.status} ${response.statusText}`);
     }
 
-    const data: any = await response.json();
-    
-    if (data.events && Array.isArray(data.events)) {
+    const data = await response.json();
+    if (Array.isArray(data.events)) {
       allEvents = allEvents.concat(data.events);
     }
 
     nextUrl = data.link?.next || data.links?.next;
     pageCount++;
-    
+
     if (nextUrl) {
       console.log(`[EONET] Following page ${pageCount + 1}:`, nextUrl);
     }
@@ -142,15 +147,14 @@ async function fetchEventsAPI(q: EventQuery): Promise<EonetEvent[]> {
   return allEvents;
 }
 
-// Helper to get default date range (1 year ago to today in UTC)
+// Default: 1 year range
 function getDefaultDateRange(): { start: string; end: string } {
   const end = new Date();
   const start = new Date();
   start.setFullYear(start.getFullYear() - 1);
-  
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0]
+    start: start.toISOString().split("T")[0],
+    end: end.toISOString().split("T")[0],
   };
 }
 
@@ -160,26 +164,28 @@ function getDefaultDateRange(): { start: string; end: string } {
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
-export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const dateRange = getDefaultDateRange();
-  
+
   const [events, setEvents] = useState<EonetEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
+
+  // ✅ Viewport filtering disabled by default now
   const [filters, setFilters] = useState<FilterState>({
     start: dateRange.start,
     end: dateRange.end,
     categories: DEFAULT_CATS,
-    viewportOnly: true
+    viewportOnly: false,
   });
 
-  // Debouncing
   const debounceTimerRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchEvents = useCallback(async () => {
-    // Cancel any in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -188,58 +194,49 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLoading(true);
       setError(null);
 
-      // Build query
       const query: EventQuery = {
         start: filters.start,
         end: filters.end,
         categories: filters.categories,
-        status: 'all',
-        limit: 100
+        status: "all",
+        limit: 200, // raise a bit to ensure more events load globally
       };
 
-      // Add bbox if viewport-only is enabled and region is set
-      if (filters.viewportOnly && region) {
-        query.bbox = regionToBbox(region);
-      }
+      // 🟢 Remove viewport restriction
+      // If you ever want to allow viewport mode again:
+      // if (filters.viewportOnly && region) query.bbox = regionToBbox(region);
 
-      // Create abort controller for this request
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
       const fetchedEvents = await fetchEventsAPI(query);
-      
-      // Only update if not aborted
+
       if (!controller.signal.aborted) {
         setEvents(fetchedEvents);
         abortControllerRef.current = null;
       }
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        console.error('[EONET] Error fetching events:', err);
-        setError(err instanceof Error ? err : new Error(err.message || 'Failed to load events'));
+      if (err.name !== "AbortError") {
+        console.error("[EONET] Error fetching events:", err);
+        setError(
+          err instanceof Error
+            ? err
+            : new Error(err.message || "Failed to load events")
+        );
       }
     } finally {
       setLoading(false);
     }
-  }, [filters, region]);
+  }, [filters]);
 
-  // Debounced fetch effect (100ms for ultra-fast, smooth updates)
+  // Debounced auto-refresh
   useEffect(() => {
-    // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-
-    // Set new timer - 100ms for near-instant map updates
-    debounceTimerRef.current = setTimeout(() => {
-      fetchEvents();
-    }, 100);
-
-    // Cleanup
+    debounceTimerRef.current = setTimeout(fetchEvents, 150);
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, [fetchEvents]);
 
@@ -251,14 +248,10 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setFilters,
     region,
     setRegion,
-    refreshEvents: fetchEvents
+    refreshEvents: fetchEvents,
   };
 
-  return (
-    <EventContext.Provider value={value}>
-      {children}
-    </EventContext.Provider>
-  );
+  return <EventContext.Provider value={value}>{children}</EventContext.Provider>;
 };
 
 export const useEvents = () => {

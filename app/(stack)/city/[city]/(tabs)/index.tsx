@@ -1,6 +1,6 @@
 import { useCities } from '@/contexts/CitiesContext';
 import { useEnvironmental } from '@/contexts/EnvironmentalContext';
-import rawCities from '@/data/us_cities.json';
+import { default as rawCities, default as usCitiesData } from '@/data/us_cities.json';
 import { City } from '@/types';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,7 +14,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import usCitiesData from '@/data/us_cities.json';
 
 const allCities = usCitiesData as Array<{
   city: string;
@@ -110,38 +109,26 @@ export default function CityDetailsPage() {
   const added = isAdded(city);
 
   // Get weather icon based on conditions
-  const getWeatherIcon = () => {
-    if (!envData.temperatureF) return '☁️';
-    
-    const temp = envData.temperatureF;
-    const humidity = envData.humidity || 0;
-    const aqi = envData.aqi || 0;
-    
-    // Determine weather condition based on data
-    if (aqi > 150) return '🌫️'; // Hazy/Smoggy
-    if (humidity > 85) return '🌧️'; // Rainy
-    if (humidity > 70 && temp < 50) return '🌦️'; // Showers
-    if (temp > 85) return '☀️'; // Sunny/Hot
-    if (temp > 70) return '⛅'; // Partly Cloudy
-    if (temp < 40) return '🌨️'; // Cold/Snow
-    return '☁️'; // Cloudy
-  };
+const getWeatherIcon = () => {
+  const code = envData.weatherCode;
+  console.log(code)
+  if (code == null) return '☁️';
 
-  const getWeatherCondition = () => {
-    if (!envData.temperatureF) return 'Loading...';
-    
-    const temp = envData.temperatureF;
-    const humidity = envData.humidity || 0;
-    const aqi = envData.aqi || 0;
-    
-    if (aqi > 150) return 'Hazy';
-    if (humidity > 85) return 'Rainy';
-    if (humidity > 70 && temp < 50) return 'Showers';
-    if (temp > 85) return 'Sunny';
-    if (temp > 70) return 'Partly Cloudy';
-    if (temp < 40) return 'Cold';
-    return 'Cloudy';
-  };
+  if (code === 0) return '☀️'; // Clear
+  if ([1, 2, 3].includes(code)) return '⛅'; // Partly cloudy
+  if ([45, 48].includes(code)) return '🌫️'; // Fog
+  if ([51, 53, 55].includes(code)) return '🌦️'; // Drizzle
+  if ([61, 63, 65].includes(code)) return '🌧️'; // Rain
+  if ([71, 73, 75].includes(code)) return '🌨️'; // Snow
+  if ([80, 81, 82].includes(code)) return '🌧️'; // Showers
+  if ([95, 96, 99].includes(code)) return '⛈️'; // Thunderstorm
+  return '☁️';
+};
+
+const getWeatherCondition = () => {
+  if (envData.weatherDescription) return envData.weatherDescription;
+  return 'Unknown';
+};
 
   return (
     <SafeAreaView style={styles.container}>

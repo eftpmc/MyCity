@@ -3,17 +3,19 @@ import { useEvents } from "@/contexts/EventContext";
 import { useMapLayer } from "@/contexts/MapLayerContext";
 import rawCities from "@/data/us_cities.json";
 import { City } from "@/types";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useNavigation, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
-import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useMemo, useRef, useState } from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MapView, { Region } from "react-native-maps";
 
 import CityMenu from "@/components/CityMenu";
 import LayerDropdown from "@/components/LayerDropdown";
+import LayerLegend from "@/components/LayerLegend";
 import LayerTimeline from "@/components/LayerTimeline";
 import MapDisplay from "@/components/MapDisplay";
 import TopControls from "@/components/TopControls";
-import { EventsFilter } from "@/contexts/EventFunctionality/EventsFilter";
+import { CATEGORY_MAP } from "@/contexts/EventContext";
 
 const usCities = rawCities as City[];
 
@@ -28,13 +30,25 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+// Helpers
+const toISODate = (d: Date) => d.toISOString().split("T")[0];
+const addMonths = (date: Date, months: number) => {
+  const d = new Date(date);
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + months);
+  if (d.getDate() < day) d.setDate(0);
+  return d;
+};
+
 export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const { cities } = useCities();
   const { activeLayer, setLayer, availableLayers } = useMapLayer();
-  const { events, filters, setFilters, setRegion } = useEvents();
+  const { events, filters, setFilters, setRegion, refreshEvents } = useEvents();
+
   const mapRef = useRef<MapView | null>(null);
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<City[]>([]);
@@ -42,7 +56,9 @@ export default function HomeScreen() {
   const [nearestCity, setNearestCity] = useState<City | null>(null);
   const [zoomLevel, setZoomLevel] = useState(15);
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeQuick, setActiveQuick] = useState<"1M" | "3M" | "6M" | "1Y" | null>(null);
+
+  const snapPoints = useMemo(() => ["40%", "75%"], []);
 
   const searchCities = (text: string) => {
     setQuery(text);
@@ -85,6 +101,30 @@ export default function HomeScreen() {
     setNearestCity(bestCity);
   };
 
+  const openFilterSheet = () => bottomSheetRef.current?.expand();
+  const closeFilterSheet = () => bottomSheetRef.current?.close();
+
+  const handleCategoryToggle = (cat: string) => {
+    const newCats = filters.categories.includes(cat)
+      ? filters.categories.filter((c) => c !== cat)
+      : [...filters.categories, cat];
+    setFilters({ ...filters, categories: newCats });
+  };
+
+  // 🔹 Quick ranges: add months to Start Date → set End Date
+  const applyQuickRange = (key: "1M" | "3M" | "6M" | "1Y") => {
+    const startBase = filters.start && !isNaN(Date.parse(filters.start))
+      ? new Date(filters.start)
+      : new Date();
+
+    const months = key === "1Y" ? 12 : parseInt(key.replace("M", ""), 10);
+    const endDate = addMonths(startBase, months);
+    const end = toISODate(endDate);
+
+    setActiveQuick(key);
+    setFilters({ ...filters, end });
+  };
+
   return (
     <View style={styles.container}>
       {/* 🌍 Map */}
@@ -113,7 +153,7 @@ export default function HomeScreen() {
         setDropdownVisible={setDropdownVisible}
         results={results}
         flyToCity={flyToCity}
-        onFilterPress={() => setShowFilters(true)} // 👈 new prop hook-up
+        onFilterPress={openFilterSheet}
       />
 
       {/* 🗺 Layer Dropdown */}
@@ -125,6 +165,95 @@ export default function HomeScreen() {
         setLayer={setLayer}
       />
 
+      {/* 🎛 Bottom Sheet Filters */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backgroundStyle={styles.sheetBackground}
+        handleIndicatorStyle={styles.sheetHandle}
+      >
+        <BottomSheetView style={styles.sheetContent}>
+          <Text style={styles.sheetTitle}>Event Filters</Text>
+
+          {/* 📅 Quick Ranges */}
+          <View style={styles.quickRow}>
+            {(["1M", "3M", "6M", "1Y"] as const).map((k) => (
+              <TouchableOpacity
+                key={k}
+                onPress={() => applyQuickRange(k)}
+                style={[styles.quickBtn, activeQuick === k && styles.quickBtnActive]}
+              >
+                <Text style={[styles.quickText, activeQuick === k && styles.quickTextActive]}>
+                  {k}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* 📅 Date Range */}
+          <Text style={styles.label}>Start Date</Text>
+          <TextInput
+            style={styles.input}
+            value={filters.start}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#888"
+            onChangeText={(v) => {
+              setActiveQuick(null);
+              setFilters({ ...filters, start: v });
+            }}
+          />
+
+          <Text style={styles.label}>End Date</Text>
+          <TextInput
+            style={styles.input}
+            value={filters.end}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#888"
+            onChangeText={(v) => {
+              setActiveQuick(null);
+              setFilters({ ...filters, end: v });
+            }}
+          />
+
+          {/* 🔖 Categories */}
+          <Text style={[styles.label, { marginTop: 10 }]}>Categories</Text>
+          <View style={styles.categoriesWrap}>
+            {Object.keys(CATEGORY_MAP).map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.categoryButton,
+                  filters.categories.includes(CATEGORY_MAP[cat]) && styles.categoryActive,
+                ]}
+                onPress={() => handleCategoryToggle(CATEGORY_MAP[cat])}
+              >
+                <Text
+                  style={[
+                    styles.categoryText,
+                    filters.categories.includes(CATEGORY_MAP[cat]) && styles.categoryTextActive,
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* ✅ Apply */}
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={() => {
+              refreshEvents();
+              closeFilterSheet();
+            }}
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </BottomSheetView>
+      </BottomSheet>
+
       {/* 🏙 City Menu */}
       <CityMenu
         selectedCity={selectedCity}
@@ -135,54 +264,80 @@ export default function HomeScreen() {
         router={router}
       />
 
-      {/* 🎛 Filter Modal */}
-      <Modal
-        visible={showFilters}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilters(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <EventsFilter value={filters} onChange={setFilters} />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowFilters(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* ⏳ Timeline */}
       <LayerTimeline />
+      <LayerLegend />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  sheetBackground: {
+    backgroundColor: "rgba(15,15,15,0.95)",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
   },
-  modalContent: {
-    backgroundColor: 'transparent',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  sheetHandle: { backgroundColor: "#555", width: 40 },
+  sheetContent: { flex: 1, padding: 18 },
+  sheetTitle: { fontSize: 18, fontWeight: "600", color: "#fff", marginBottom: 12 },
+
+  // Quick ranges
+  quickRow: {
+    flexDirection: "row",
+    marginBottom: 12,
+    gap: 8,
   },
-  closeButton: {
-    backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
+  quickBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#222",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  quickBtnActive: {
+    backgroundColor: "#4A90E2",
+    borderColor: "#4A90E2",
+  },
+  quickText: { color: "#ddd", fontSize: 13, fontWeight: "600" },
+  quickTextActive: { color: "#fff" },
+
+  label: { color: "#ccc", fontSize: 14, marginBottom: 4 },
+  input: {
+    backgroundColor: "#1a1a1a",
+    color: "#fff",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+
+  categoriesWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginVertical: 8,
+  },
+  categoryButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#222",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  categoryActive: { backgroundColor: "#4A90E2", borderColor: "#4A90E2" },
+  categoryText: { color: "#fff", fontSize: 13 },
+  categoryTextActive: { color: "#fff" },
+
+  applyButton: {
+    backgroundColor: "#4A90E2",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
     marginTop: 12,
   },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  applyButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
 });

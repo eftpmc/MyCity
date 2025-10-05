@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useEnvironmental } from '@/contexts/EnvironmentalContext';
+import { RefreshCw } from 'lucide-react-native';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 interface EnvironmentalDashboardProps {
@@ -24,12 +25,6 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
     <View style={styles.container}>
       {/* Simplified Header */}
       <View style={styles.modernHeader}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerSubtitle}>Environmental Report</Text>
-          <TouchableOpacity style={styles.refreshIconButton} onPress={refreshData}>
-            <Text style={styles.refreshIconText}>🔄</Text>
-          </TouchableOpacity>
-        </View>
         <View style={styles.liveIndicatorHeader}>
           <View style={styles.liveDotHeader} />
           <Text style={styles.liveTextHeader}>Live Data • NASA & EPA</Text>
@@ -154,9 +149,12 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
         </View>
 
         {/* Refresh Button */}
-        <TouchableOpacity style={styles.refreshButton} onPress={refreshData}>
-          <Text style={styles.refreshText}>🔄 Refresh Data</Text>
-        </TouchableOpacity>
+    <TouchableOpacity style={styles.refreshButton} onPress={refreshData}>
+      <View style={styles.refreshContent}>
+        <RefreshCw size={18} color="#fff" style={{ marginRight: 6 }} />
+        <Text style={styles.refreshText}>Refresh Data</Text>
+      </View>
+    </TouchableOpacity>
       </View>
 
       {/* Report Description */}
@@ -255,17 +253,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  refreshIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2A2A2A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  refreshIconText: {
-    fontSize: 18,
   },
   liveIndicatorHeader: {
     flexDirection: 'row',
@@ -411,7 +398,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 16,
+    marginVertical: 16,
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -539,20 +526,23 @@ const styles = StyleSheet.create({
     color: '#888888',
   },
   refreshButton: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
+    backgroundColor: "#0af",
+    borderRadius: 10,
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  refreshContent: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   refreshText: {
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
-    fontWeight: '700',
-    color: '#00FF88',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
 });
 

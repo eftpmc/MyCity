@@ -1,143 +1,152 @@
 import { useMapLayer } from "@/contexts/MapLayerContext";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
-import React, { useEffect, useMemo, useRef } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { formatDate, generateDates } from "@/utils/timeline";
+import Slider from "@react-native-community/slider";
+import { Pause, Play } from "lucide-react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
+// simple debounce helper
+function debounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
+  let timer: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
 
 export default function LayerTimeline() {
   const { selectedDate, setSelectedDate, activeLayer } = useMapLayer();
-  const listRef = useRef<FlatList<number>>(null);
+  const [playing, setPlaying] = useState(false);
 
-  // Always build years, even if not used yet
-  const years = useMemo(() => {
-    const now = new Date().getFullYear();
-    return Array.from({ length: now - 2000 + 1 }, (_, i) => 2000 + i);
-  }, []);
+  const resolution = (activeLayer as any)?.temporalResolution || "monthly";
+  const dates = useMemo(() => generateDates(resolution), [resolution]);
+  const [index, setIndex] = useState(Math.floor(dates.length / 2));
 
-  const selectedYear = new Date(selectedDate).getFullYear();
+  // 🧩 Debounced date updater
+  const debouncedSetDate = useMemo(
+    () => debounce((d: string) => setSelectedDate(d), 250),
+    [setSelectedDate]
+  );
 
-  const handleSelect = (year: number) => {
-    const date = new Date(year, 6, 1);
-    setSelectedDate(date.toISOString().split("T")[0]);
-  };
+  // Set initial middle date
+  useEffect(() => {
+    if (!selectedDate && dates.length > 0) {
+      const mid = Math.floor(dates.length / 2);
+      setIndex(mid);
+      setSelectedDate(dates[mid]);
+    }
+  }, [dates, selectedDate]);
+
+  // Keep selectedDate synced (debounced)
+  useEffect(() => {
+    if (dates[index]) debouncedSetDate(dates[index]);
+  }, [index]);
+
+  // --- Playback control ---
+  const frameRef = useRef<number | null>(null);
+  const lastFrameTime = useRef(0);
 
   useEffect(() => {
-    const index = years.indexOf(selectedYear);
-    if (index >= 0) {
-      listRef.current?.scrollToIndex({ index, animated: true });
+    if (!playing) {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      return;
     }
-  }, [selectedYear, years]);
 
-  // Conditionally render the UI — not the hooks
+    const stepInterval =
+      resolution === "daily" ? 400 :
+      resolution === "monthly" ? 1200 :
+      2500;
+
+    const animate = (time: number) => {
+      const delta = time - lastFrameTime.current;
+      if (delta > stepInterval) {
+        setIndex((prev) => (prev + 1) % dates.length);
+        lastFrameTime.current = time;
+      }
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, [playing, dates, resolution]);
+
   if (!activeLayer) return null;
 
-  const scrollBy = (dir: 1 | -1) => {
-    const index = years.indexOf(selectedYear);
-    const nextIndex = Math.max(0, Math.min(years.length - 1, index + dir));
-    handleSelect(years[nextIndex]);
-    listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-  };
-
   return (
-    <View style={styles.timelineContainer}>
-      <Text style={styles.timelineLabel}>
-        {selectedDate} ({activeLayer.name})
-      </Text>
-
+    <View style={styles.container}>
       <View style={styles.row}>
-        <TouchableOpacity onPress={() => scrollBy(-1)} style={styles.arrowBtn}>
-          <ChevronLeft size={20} color="#fff" />
+        {/* ▶️ Play/Pause */}
+        <TouchableOpacity
+          onPress={() => setPlaying((p) => !p)}
+          style={[styles.playButton, playing && styles.playButtonActive]}
+        >
+          {playing ? <Pause size={18} color="#fff" /> : <Play size={18} color="#fff" />}
         </TouchableOpacity>
 
-        <FlatList
-          ref={listRef}
-          data={years}
-          horizontal
-          keyExtractor={(y) => y.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-          getItemLayout={(_, i) => ({ length: 60, offset: 60 * i, index: i })}
-          renderItem={({ item: year }) => {
-            const isActive = year === selectedYear;
-            return (
-              <TouchableOpacity
-                style={[styles.yearItem, isActive && styles.yearItemActive]}
-                onPress={() => handleSelect(year)}
-              >
-                <Text style={[styles.yearText, isActive && styles.yearTextActive]}>
-                  {year}
-                </Text>
-              </TouchableOpacity>
-            );
+        {/* 🕓 Smooth Slider */}
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={dates.length - 1}
+          step={1}
+          value={index}
+          minimumTrackTintColor="#0af"
+          maximumTrackTintColor="#3a3a3c"
+          thumbTintColor="#fff"
+          onValueChange={(v) => {
+            setPlaying(false);
+            setIndex(Math.round(v));
           }}
         />
 
-        <TouchableOpacity onPress={() => scrollBy(1)} style={styles.arrowBtn}>
-          <ChevronRight size={20} color="#fff" />
-        </TouchableOpacity>
+        {/* 📅 Date label */}
+        <Text style={styles.label}>{formatDate(dates[index], resolution)}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  timelineContainer: {
+  container: {
     position: "absolute",
-    bottom: 16,
-    left: 0,
-    right: 0,
-    alignItems: "center",
+    bottom: 20,
+    left: 20,
+    right: 20,
     backgroundColor: "rgba(28,28,30,0.9)",
     borderRadius: 16,
-    marginHorizontal: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     shadowColor: "#000",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
-  timelineLabel: {
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 6,
-    fontSize: 14,
-    fontWeight: "500",
-  },
   row: {
     flexDirection: "row",
     alignItems: "center",
   },
-  arrowBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  slider: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  playButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#2c2c2e",
     justifyContent: "center",
     alignItems: "center",
-    marginHorizontal: 4,
   },
-  listContainer: {
-    paddingHorizontal: 10,
-  },
-  yearItem: {
-    width: 60,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: 4,
-    backgroundColor: "#2c2c2e",
-  },
-  yearItemActive: {
+  playButtonActive: {
     backgroundColor: "#0af",
   },
-  yearText: {
-    color: "#aaa",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  yearTextActive: {
+  label: {
     color: "#fff",
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "500",
+    minWidth: 85,
+    textAlign: "right",
   },
 });
