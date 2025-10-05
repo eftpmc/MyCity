@@ -124,13 +124,13 @@ async function fetchEventsAPI(q: EventQuery): Promise<EonetEvent[]> {
   console.log("[EONET] Fetching events:", nextUrl);
 
   while (nextUrl && pageCount < maxPages) {
-    const response = await fetch(nextUrl);
+    const response: Response = await fetch(nextUrl);
 
     if (!response.ok) {
       throw new Error(`EONET API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     if (Array.isArray(data.events)) {
       allEvents = allEvents.concat(data.events);
     }
@@ -182,7 +182,7 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
     viewportOnly: false,
   });
 
-  const debounceTimerRef = useRef<number | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchEvents = useCallback(async () => {

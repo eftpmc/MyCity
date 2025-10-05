@@ -1,7 +1,6 @@
-import { useEnvironmental } from '@/contexts/EnvironmentalContext';
-import { RefreshCw } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useEnvironmental } from '@/contexts/EnvironmentalContext';
 import Svg, { Circle } from 'react-native-svg';
 
 interface EnvironmentalDashboardProps {
@@ -23,8 +22,17 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
 
   return (
     <View style={styles.container}>
-      {/* Simplified Header */}
+      {/* Modern Header with City Name */}
       <View style={styles.modernHeader}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.cityName}>{cityName}</Text>
+            <Text style={styles.headerSubtitle}>Environmental Report</Text>
+          </View>
+          <TouchableOpacity style={styles.refreshIconButton} onPress={refreshData}>
+            <Text style={styles.refreshIconText}>🔄</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.liveIndicatorHeader}>
           <View style={styles.liveDotHeader} />
           <Text style={styles.liveTextHeader}>Live Data • NASA & EPA</Text>
@@ -149,12 +157,9 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
         </View>
 
         {/* Refresh Button */}
-    <TouchableOpacity style={styles.refreshButton} onPress={refreshData}>
-      <View style={styles.refreshContent}>
-        <RefreshCw size={18} color="#fff" style={{ marginRight: 6 }} />
-        <Text style={styles.refreshText}>Refresh Data</Text>
-      </View>
-    </TouchableOpacity>
+        <TouchableOpacity style={styles.refreshButton} onPress={refreshData}>
+          <Text style={styles.refreshText}>🔄 Refresh Data</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Report Description */}
@@ -236,10 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A0A0A',
   },
   modernHeader: {
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#1E1E1E',
     paddingHorizontal: 20,
-    paddingTop: 70,
+    paddingTop: 20,
     paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
   },
   headerTop: {
     flexDirection: 'row',
@@ -247,12 +254,30 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
+  cityName: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
   headerSubtitle: {
     fontSize: 14,
     color: '#888888',
     fontWeight: '500',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  refreshIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshIconText: {
+    fontSize: 18,
   },
   liveIndicatorHeader: {
     flexDirection: 'row',
@@ -398,7 +423,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginVertical: 16,
+    marginBottom: 16,
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -526,23 +551,20 @@ const styles = StyleSheet.create({
     color: '#888888',
   },
   refreshButton: {
-    backgroundColor: "#0af",
-    borderRadius: 10,
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-  },
-  refreshContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
   },
   refreshText: {
-    color: "#fff",
-    fontWeight: "600",
     fontSize: 14,
+    fontWeight: '700',
+    color: '#00FF88',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });
 
