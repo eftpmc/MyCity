@@ -1,3 +1,4 @@
+import { useMapLayer } from '@/contexts/MapLayerContext';
 import { City, EonetGeometry } from '@/types';
 import React from 'react';
 import { StyleSheet as RNStyleSheet } from 'react-native';
