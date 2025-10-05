@@ -1,4 +1,5 @@
 import { City, EonetGeometry } from '@/types';
+import { useMapLayer } from '@/contexts/MapLayerContext';
 import React from 'react';
 import { StyleSheet as RNStyleSheet } from 'react-native';
 import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
