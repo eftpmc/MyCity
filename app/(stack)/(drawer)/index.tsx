@@ -10,12 +10,14 @@ import MapView, { Region } from "react-native-maps";
 
 import CityMenu from "@/components/CityMenu";
 import LayerDropdown from "@/components/LayerDropdown";
+import LayerTimeline from "@/components/LayerTimeline"; // ⬅️ new import
 import MapDisplay from "@/components/MapDisplay";
 import TopControls from "@/components/TopControls";
 import { EventsFilter } from "@/contexts/EventFunctionality/EventsFilter";
 
 const usCities = rawCities as City[];
 
+// helper functions for distance calc
 const toRad = (v: number) => (v * Math.PI) / 180;
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371;
@@ -43,6 +45,7 @@ export default function HomeScreen() {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Search logic
   const searchCities = (text: string) => {
     setQuery(text);
     if (text.length < 2) return setResults([]);
@@ -53,6 +56,7 @@ export default function HomeScreen() {
     );
   };
 
+  // Map navigation
   const animateTo = (city: City, delta = 0.7, duration = 2000) => {
     const lat = parseFloat(city.lat);
     const lng = parseFloat(city.lng);
@@ -69,6 +73,7 @@ export default function HomeScreen() {
     setResults([]);
   };
 
+  // Determine nearest city
   const updateNearestCity = (lat: number, lng: number) => {
     let bestCity: City | null = null;
     let bestScore = Infinity;
@@ -86,6 +91,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* 🌍 Main Map Display */}
       <MapDisplay
         mapRef={mapRef}
         cities={cities}
@@ -98,6 +104,7 @@ export default function HomeScreen() {
         onRegionChangeComplete={(region: Region) => setRegion(region)}
       />
 
+      {/* 🔎 Top Bar Controls */}
       <TopControls
         navigation={navigation}
         query={query}
@@ -112,6 +119,7 @@ export default function HomeScreen() {
         flyToCity={flyToCity}
       />
 
+      {/* 🗺️ Layer Dropdown */}
       <LayerDropdown
         visible={dropdownVisible}
         setVisible={setDropdownVisible}
@@ -120,6 +128,7 @@ export default function HomeScreen() {
         setLayer={setLayer}
       />
 
+      {/* 🏙️ City Info / Quick Nearest City */}
       <CityMenu
         selectedCity={selectedCity}
         nearestCity={nearestCity}
@@ -162,6 +171,9 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ⏳ Layer Timeline (Bottom Slider) */}
+      <LayerTimeline />
     </View>
   );
 }
