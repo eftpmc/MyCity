@@ -223,17 +223,17 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [filters, region]);
 
-  // Debounced fetch effect
+  // Debounced fetch effect (100ms for ultra-fast, smooth updates)
   useEffect(() => {
     // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Set new timer
+    // Set new timer - 100ms for near-instant map updates
     debounceTimerRef.current = setTimeout(() => {
       fetchEvents();
-    }, 450);
+    }, 100);
 
     // Cleanup
     return () => {
