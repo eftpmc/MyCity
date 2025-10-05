@@ -1,10 +1,10 @@
 import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
 } from "react";
 
 // ============================================================================
@@ -127,7 +127,7 @@ async function fetchEventsAPI(q: EventQuery): Promise<EonetEvent[]> {
     const response: Response = await fetch(nextUrl);
 
     if (!response.ok) {
-      throw new Error(`EONET API error: ${response.status} ${response.statusText}`);
+      break;
     }
 
     const data: any = await response.json();
