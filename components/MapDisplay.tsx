@@ -4,7 +4,7 @@ import { useMapLayer } from '@/contexts/MapLayerContext';
 import { City, EonetGeometry } from '@/types';
 import * as Location from 'expo-location'; // ✅ import location
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet as RNStyleSheet } from 'react-native';
+import { Alert, StyleSheet as RNStyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
 
 interface Props {
@@ -77,7 +77,7 @@ export default function MapDisplay({
   }, []);
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <EventDetailModal
         visible={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
@@ -137,17 +137,70 @@ export default function MapDisplay({
             />
           ))}
 
-          {/* 🗺️ EarthData GIBS layer */}
+          {/* 🗺️ EarthData GIBS layer - ensure visibility at higher zooms and rerender on change */}
           {activeLayer && (
             <UrlTile
+              key={`${activeLayer?.id || 'layer'}-${selectedDate}`}
               urlTemplate={activeLayer.url.replace('{date}', selectedDate)}
-              maximumZ={activeLayer.maxZoom ?? 9}
-              zIndex={-1}
+              minimumZ={0}
+              maximumZ={activeLayer.maxZoom ?? 19}
+              zIndex={0}
               tileSize={256}
+              shouldReplaceMapContent={false}
+              opacity={0.9}
             />
           )}
         </>
       </MapView>
-    </>
+
+      {/* ➤ Recenter to user's location */}
+      <TouchableOpacity
+        style={styles.recenterBtn}
+        activeOpacity={0.8}
+        onPress={async () => {
+          try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Location permission is required to recenter the map.');
+              return;
+            }
+            const userLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            const { latitude, longitude } = userLocation.coords;
+            const target: Region = {
+              latitude,
+              longitude,
+              latitudeDelta: 2.5,
+              longitudeDelta: 2.5,
+            };
+            setRegion(target);
+            mapRef.current?.animateToRegion(target, 800);
+          } catch (e) {
+            console.warn('Failed to recenter:', e);
+          }
+        }}
+      >
+        <Text style={styles.recenterText}>⌖</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
+
+const styles = RNStyleSheet.create({
+  recenterBtn: {
+    position: 'absolute',
+    right: 16,
+    bottom: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  recenterText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+  },
+});

@@ -56,18 +56,30 @@ export default function HomeScreen() {
   const [nearestCity, setNearestCity] = useState<City | null>(null);
   const [zoomLevel, setZoomLevel] = useState(15);
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeQuick, setActiveQuick] = useState<"1M" | "3M" | "6M" | "1Y" | null>(null);
 
   const snapPoints = useMemo(() => ["40%", "75%"], []);
 
   const searchCities = (text: string) => {
+    // Hide layers dropdown while searching to avoid visual overlap
+    if (dropdownVisible) setDropdownVisible(false);
+
     setQuery(text);
-    if (text.length < 2) return setResults([]);
-    setResults(
-      usCities
-        .filter((c) => c.city.toLowerCase().startsWith(text.toLowerCase()))
-        .slice(0, 20)
-    );
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      if (text.trim().length < 2) {
+        setResults([]);
+        return;
+      }
+      const q = text.toLowerCase();
+      setResults(
+        usCities
+          .filter((c) => c.city.toLowerCase().includes(q))
+          .slice(0, 20)
+      );
+    }, 120);
   };
 
   const animateTo = (city: City, delta = 0.7, duration = 2000) => {
@@ -150,20 +162,29 @@ export default function HomeScreen() {
           setResults([]);
         }}
         activeLayer={activeLayer}
-        setDropdownVisible={setDropdownVisible}
+        setDropdownVisible={(v: boolean) => {
+          // Opening layers should clear search results to prevent overlap
+          if (v) {
+            setQuery("");
+            setResults([]);
+          }
+          setDropdownVisible(v);
+        }}
         results={results}
         flyToCity={flyToCity}
         onFilterPress={openFilterSheet}
       />
 
-      {/* 🗺 Layer Dropdown */}
-      <LayerDropdown
-        visible={dropdownVisible}
-        setVisible={setDropdownVisible}
-        availableLayers={availableLayers}
-        activeLayer={activeLayer}
-        setLayer={setLayer}
-      />
+      {/* 🗺 Layer Dropdown - ONLY show if search results are empty */}
+      {results.length === 0 && (
+        <LayerDropdown
+          visible={dropdownVisible}
+          setVisible={setDropdownVisible}
+          availableLayers={availableLayers}
+          activeLayer={activeLayer}
+          setLayer={setLayer}
+        />
+      )}
 
       {/* 🎛 Bottom Sheet Filters */}
       <BottomSheet

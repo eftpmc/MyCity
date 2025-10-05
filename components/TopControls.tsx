@@ -74,7 +74,7 @@ export default function TopControls({
           </View>
 
           {/* Only show buttons inline on large screens */}
-          {!isCompact && (
+          {!isCompact && results.length === 0 && (
             <>
               <TouchableOpacity
                 style={styles.dropdownButton}
@@ -98,7 +98,7 @@ export default function TopControls({
         </View>
 
         {/* On small screens → buttons go to a new row */}
-        {isCompact && (
+        {isCompact && results.length === 0 && (
           <View style={styles.secondRow}>
             <TouchableOpacity
               style={[styles.dropdownButton, { flex: 1, marginLeft: 0 }]}
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     top: 50,
     left: 20,
     right: 20,
-    zIndex: 2,
+    zIndex: 4,
   },
   mainRow: {
     flexDirection: 'row',
@@ -210,24 +210,27 @@ const styles = StyleSheet.create({
 
   resultsList: {
     position: 'absolute',
-    top: 110,
+    top: 142, // extra breathing room beneath the search bar
     left: 20,
     right: 20,
     maxHeight: 280,
-    zIndex: 2,
+    zIndex: 3,
+    paddingTop: 12, // pleasant gap between input and results
   },
-  resultsContainer: { paddingBottom: 12 },
+  resultsContainer: { paddingTop: 0, paddingBottom: 12 },
   resultItem: {
     backgroundColor: '#1c1c1e',
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#2a2a2d',
     shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   resultTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
   resultSubtitle: { color: '#9a9a9a', fontSize: 13, marginTop: 2 },

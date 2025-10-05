@@ -174,12 +174,11 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<Error | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
 
-  // ✅ Viewport filtering disabled by default now
   const [filters, setFilters] = useState<FilterState>({
     start: dateRange.start,
     end: dateRange.end,
     categories: DEFAULT_CATS,
-    viewportOnly: false,
+    viewportOnly: true,
   });
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -202,9 +201,10 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
         limit: 200, // raise a bit to ensure more events load globally
       };
 
-      // 🟢 Remove viewport restriction
-      // If you ever want to allow viewport mode again:
-      // if (filters.viewportOnly && region) query.bbox = regionToBbox(region);
+      // Viewport restriction: when ON and region known, include bbox
+      if (filters.viewportOnly && region) {
+        query.bbox = regionToBbox(region);
+      }
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -227,14 +227,15 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, region]);
 
   // Debounced auto-refresh
   useEffect(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    debounceTimerRef.current = setTimeout(fetchEvents, 150);
+    // Make markers appear faster after camera movements
+    debounceTimerRef.current = setTimeout(fetchEvents, 75);
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
