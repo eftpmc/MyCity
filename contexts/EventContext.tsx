@@ -193,6 +193,13 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(true);
       setError(null);
 
+      // If no categories selected, intentionally return no events
+      if (!filters.categories || filters.categories.length === 0) {
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+
       const query: EventQuery = {
         start: filters.start,
         end: filters.end,
