@@ -3,13 +3,13 @@ import { DrawerActions } from '@react-navigation/native';
 import { ChevronDown, Filter, Menu, Search, X } from 'lucide-react-native';
 import React from 'react';
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 
 interface Props {
@@ -207,12 +207,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   resultsList: {
     position: 'absolute',
     left: 20,
     right: 20,
     bottom: 90, // move search results to bottom of screen
+    top: 110, // move results just below the top controls
     maxHeight: 300,
     zIndex: 3,
     paddingTop: 8,
