@@ -1,9 +1,10 @@
 import { useMapLayer } from '@/contexts/MapLayerContext';
 import { City, EonetGeometry } from '@/types';
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet as RNStyleSheet } from 'react-native';
 import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
 import { EventMarker } from '@/contexts/EventFunctionality/EventMarker';
+import { EventDetailModal } from '@/contexts/EventFunctionality/EventDetailModal';
 
 interface Props {
   mapRef: React.RefObject<MapView | null>;
@@ -29,8 +30,15 @@ export default function MapDisplay({
   onRegionChangeComplete,
 }: Props) {
   const { selectedDate } = useMapLayer(); // ✅ grab date from context
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
   return (
+    <>
+      <EventDetailModal
+        visible={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        event={selectedEvent}
+      />
     <MapView
       ref={mapRef}
       style={RNStyleSheet.absoluteFillObject}
@@ -70,6 +78,7 @@ export default function MapDisplay({
               key={`event-${i}`}
               event={ev}
               coordinate={{ latitude: lat, longitude: lon }}
+              onPress={() => setSelectedEvent(ev)}
             />
           );
         })}
@@ -99,5 +108,6 @@ export default function MapDisplay({
         )}
       </>
     </MapView>
+    </>
   );
 }

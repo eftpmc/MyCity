@@ -16,13 +16,13 @@ interface EventsFilterProps {
   onChange: (f: FilterState) => void;
 }
 
-export function EventsFilter({ value, onChange }: EventsFilterProps): JSX.Element {
+export function EventsFilter({ value, onChange }: EventsFilterProps): React.JSX.Element {
   const [startText, setStartText] = useState(value.start);
   const [endText, setEndText] = useState(value.end);
 
   const handleStartChange = (text: string) => {
     setStartText(text);
-    // Simple validation: if it looks like YYYY-MM-DD, update
+    // Update immediately on blur or when valid
     if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
       onChange({ ...value, start: text });
     }
@@ -33,6 +33,40 @@ export function EventsFilter({ value, onChange }: EventsFilterProps): JSX.Elemen
     if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
       onChange({ ...value, end: text });
     }
+  };
+
+  const handleStartBlur = () => {
+    // Validate and update on blur
+    if (/^\d{4}-\d{2}-\d{2}$/.test(startText)) {
+      onChange({ ...value, start: startText });
+    } else {
+      // Reset to valid value if invalid
+      setStartText(value.start);
+    }
+  };
+
+  const handleEndBlur = () => {
+    // Validate and update on blur
+    if (/^\d{4}-\d{2}-\d{2}$/.test(endText)) {
+      onChange({ ...value, end: endText });
+    } else {
+      // Reset to valid value if invalid
+      setEndText(value.end);
+    }
+  };
+
+  // Quick date range presets
+  const setDateRange = (months: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - months);
+    
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
+    setStartText(startStr);
+    setEndText(endStr);
+    onChange({ ...value, start: startStr, end: endStr });
   };
 
   const toggleCategory = (slug: string) => {
@@ -69,6 +103,23 @@ export function EventsFilter({ value, onChange }: EventsFilterProps): JSX.Elemen
         {/* Date Range */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Date Range</Text>
+          
+          {/* Quick Presets */}
+          <View style={styles.presetRow}>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => setDateRange(1)}>
+              <Text style={styles.presetText}>1M</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => setDateRange(3)}>
+              <Text style={styles.presetText}>3M</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => setDateRange(6)}>
+              <Text style={styles.presetText}>6M</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => setDateRange(12)}>
+              <Text style={styles.presetText}>1Y</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.dateRow}>
             <View style={styles.dateInput}>
               <Text style={styles.dateLabel}>Start</Text>
@@ -76,6 +127,7 @@ export function EventsFilter({ value, onChange }: EventsFilterProps): JSX.Elemen
                 style={styles.input}
                 value={startText}
                 onChangeText={handleStartChange}
+                onBlur={handleStartBlur}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 keyboardType="numbers-and-punctuation"
@@ -89,6 +141,7 @@ export function EventsFilter({ value, onChange }: EventsFilterProps): JSX.Elemen
                 style={styles.input}
                 value={endText}
                 onChangeText={handleEndChange}
+                onBlur={handleEndBlur}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 keyboardType="numbers-and-punctuation"
@@ -194,6 +247,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
     marginBottom: 12,
+  },
+  presetRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  presetBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(74, 144, 226, 0.2)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 144, 226, 0.4)',
+  },
+  presetText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4A90E2',
   },
   dateRow: {
     flexDirection: 'row',

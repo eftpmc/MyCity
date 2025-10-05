@@ -2,7 +2,7 @@
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Tabs, useLocalSearchParams } from "expo-router";
-import { CloudSun, Home } from "lucide-react-native";
+import { Globe, Home } from "lucide-react-native";
 import React from "react";
 
 export default function CityTabsLayout() {
@@ -28,7 +28,7 @@ export default function CityTabsLayout() {
         name="reports"
         options={{
           title: "Reports",
-          tabBarIcon: ({ color, size }) => <CloudSun color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <Globe color={color} size={size} />,
         }}
       />
     </Tabs>

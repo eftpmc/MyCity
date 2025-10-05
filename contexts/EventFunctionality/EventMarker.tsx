@@ -13,19 +13,19 @@ interface EventMarkerProps {
     latitude: number;
     longitude: number;
   };
+  onPress?: () => void;
 }
 
-export function EventMarker({ event, coordinate }: EventMarkerProps): JSX.Element {
+export function EventMarker({ event, coordinate, onPress }: EventMarkerProps): React.JSX.Element {
   const config = getCategoryConfig(event);
-  const description = event.categories?.map((c) => c.title).join(', ') || '';
 
   return (
     <Marker
       coordinate={coordinate}
-      title={event.title}
-      description={description}
       anchor={{ x: 0.5, y: 0.5 }}
       centerOffset={{ x: 0, y: 0 }}
+      onPress={onPress}
+      tracksViewChanges={false}
     >
       <View style={styles.markerContainer}>
         {/* Icon background circle */}
