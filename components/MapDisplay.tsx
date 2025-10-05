@@ -1,7 +1,8 @@
-import { City, EonetGeometry } from '@/types';
-import React from 'react';
-import { StyleSheet as RNStyleSheet } from 'react-native';
-import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
+import { useMapLayer } from "@/contexts/MapLayerContext"; // ✅ added
+import { City, EonetGeometry } from "@/types";
+import React from "react";
+import { StyleSheet as RNStyleSheet } from "react-native";
+import MapView, { Marker, Region, UrlTile } from "react-native-maps";
 
 interface Props {
   mapRef: React.RefObject<MapView | null>;
@@ -24,6 +25,8 @@ export default function MapDisplay({
   onDeselectCity,
   setZoomLevel,
 }: Props) {
+  const { selectedDate } = useMapLayer(); // ✅ grab date from context
+
   return (
     <MapView
       ref={mapRef}
@@ -43,6 +46,7 @@ export default function MapDisplay({
       onPress={onDeselectCity}
     >
       <>
+        {/* 🌋 EONET Natural Events */}
         {events.map((ev, i) => {
           const geom = Array.isArray(ev.geometry)
             ? ev.geometry.find(
@@ -59,12 +63,15 @@ export default function MapDisplay({
               key={`event-${i}`}
               coordinate={{ latitude: lat, longitude: lon }}
               title={ev.title}
-              description={ev.categories?.map((c: any) => c.title).join(', ')}
+              description={ev.categories
+                ?.map((c: any) => c.title)
+                .join(", ")}
               pinColor="#ff7043"
             />
           );
         })}
 
+        {/* 🏙️ City markers */}
         {cities.map((city, i) => (
           <Marker
             key={i}
@@ -78,9 +85,10 @@ export default function MapDisplay({
           />
         ))}
 
+        {/* 🗺️ EarthData GIBS layer */}
         {activeLayer && (
           <UrlTile
-            urlTemplate={activeLayer.url}
+            urlTemplate={activeLayer.url.replace("{date}", selectedDate)}
             maximumZ={activeLayer.maxZoom ?? 9}
             zIndex={-1}
             tileSize={256}
