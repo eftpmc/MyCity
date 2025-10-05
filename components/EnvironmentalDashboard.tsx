@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useEnvironmental } from '@/contexts/EnvironmentalContext';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 interface EnvironmentalDashboardProps {
@@ -24,15 +24,6 @@ export function EnvironmentalDashboard({ cityName }: EnvironmentalDashboardProps
     <View style={styles.container}>
       {/* Modern Header with City Name */}
       <View style={styles.modernHeader}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.cityName}>{cityName}</Text>
-            <Text style={styles.headerSubtitle}>Environmental Report</Text>
-          </View>
-          <TouchableOpacity style={styles.refreshIconButton} onPress={refreshData}>
-            <Text style={styles.refreshIconText}>🔄</Text>
-          </TouchableOpacity>
-        </View>
         <View style={styles.liveIndicatorHeader}>
           <View style={styles.liveDotHeader} />
           <Text style={styles.liveTextHeader}>Live Data • NASA & EPA</Text>
@@ -283,6 +274,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 32,
   },
   liveDotHeader: {
     width: 8,
