@@ -123,6 +123,10 @@ export default function HomeScreen() {
     setFilters({ ...filters, categories: newCats });
   };
 
+  const deselectAllCategories = () => {
+    setFilters({ ...filters, categories: [] });
+  };
+
   // 🔹 Quick ranges: add months to Start Date → set End Date
   const applyQuickRange = (key: "1M" | "3M" | "6M" | "1Y") => {
     const startBase = filters.start && !isNaN(Date.parse(filters.start))
@@ -239,7 +243,16 @@ export default function HomeScreen() {
           />
 
           {/* 🔖 Categories */}
-          <Text style={[styles.label, { marginTop: 10 }]}>Categories</Text>
+          <View style={styles.categoriesHeaderRow}>
+            <Text style={[styles.label, { marginTop: 10 }]}>Categories</Text>
+            <TouchableOpacity
+              onPress={deselectAllCategories}
+              style={styles.smallOutlineBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.smallOutlineBtnText}>Deselect All</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.categoriesWrap}>
             {Object.keys(CATEGORY_MAP).map((cat) => (
               <TouchableOpacity
@@ -341,6 +354,20 @@ const styles = StyleSheet.create({
     gap: 8,
     marginVertical: 8,
   },
+  categoriesHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  smallOutlineBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#444",
+    backgroundColor: "#1a1a1a",
+  },
+  smallOutlineBtnText: { color: "#ddd", fontSize: 12, fontWeight: "600" },
   categoryButton: {
     paddingVertical: 6,
     paddingHorizontal: 10,

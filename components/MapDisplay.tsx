@@ -144,10 +144,9 @@ export default function MapDisplay({
               urlTemplate={activeLayer.url.replace('{date}', selectedDate)}
               minimumZ={0}
               maximumZ={activeLayer.maxZoom ?? 19}
-              zIndex={0}
+              zIndex={-1}
               tileSize={256}
               shouldReplaceMapContent={false}
-              opacity={0.9}
             />
           )}
         </>
