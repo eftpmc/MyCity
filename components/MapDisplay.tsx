@@ -1,9 +1,9 @@
 import { useMapLayer } from '@/contexts/MapLayerContext';
 import { City, EonetGeometry } from '@/types';
-import { useMapLayer } from '@/contexts/MapLayerContext';
 import React from 'react';
 import { StyleSheet as RNStyleSheet } from 'react-native';
 import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
+import { EventMarker } from '@/contexts/EventFunctionality/EventMarker';
 
 interface Props {
   mapRef: React.RefObject<MapView | null>;
@@ -66,12 +66,10 @@ export default function MapDisplay({
           const [lon, lat] = geom.coordinates;
 
           return (
-            <Marker
+            <EventMarker
               key={`event-${i}`}
+              event={ev}
               coordinate={{ latitude: lat, longitude: lon }}
-              title={ev.title}
-              description={ev.categories?.map((c: any) => c.title).join(', ')}
-              pinColor="#ff7043"
             />
           );
         })}

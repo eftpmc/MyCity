@@ -135,11 +135,6 @@ export default function HomeScreen() {
         router={router}
       />
 
-      {/* Event Counter */}
-      <View style={styles.counterPill}>
-        <Text style={styles.counterText}>Events: {events.length}</Text>
-      </View>
-
       {/* 🎛 Filter Modal */}
       <Modal
         visible={showFilters}
@@ -168,25 +163,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  counterPill: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 20,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  counterText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

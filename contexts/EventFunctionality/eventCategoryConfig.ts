@@ -78,30 +78,79 @@ export const CATEGORY_CONFIGS: Record<CategorySlug, CategoryConfig> = {
   },
 };
 
+// Helper map to match by title (case-insensitive)
+const TITLE_TO_SLUG_MAP: Record<string, CategorySlug> = {
+  'dust and haze': 'dustHaze',
+  'manmade': 'manmade',
+  'sea and lake ice': 'seaLakeIce',
+  'severe storms': 'severeStorms',
+  'snow': 'snow',
+  'volcanoes': 'volcanoes',
+  'water color': 'waterColor',
+  'floods': 'floods',
+  'wildfires': 'wildfires',
+};
+
 /**
  * Get the category config for an event
+ * Tries multiple matching strategies: id, slug, title
  * Falls back to wildfires config if category not found
  */
-export function getCategoryConfig(event: { categories?: Array<{ slug?: string }> }): CategoryConfig {
+export function getCategoryConfig(event: { categories?: Array<{ id?: number | string; slug?: string; title?: string }> }): CategoryConfig {
   if (!event.categories || event.categories.length === 0) {
+    console.warn('[EventMarker] No categories found for event');
     return CATEGORY_CONFIGS.wildfires; // default
   }
 
-  const slug = event.categories[0]?.slug as CategorySlug;
-  return CATEGORY_CONFIGS[slug] || CATEGORY_CONFIGS.wildfires;
+  const category = event.categories[0];
+  
+  // Strategy 1: Try matching by slug
+  if (category.slug && CATEGORY_CONFIGS[category.slug as CategorySlug]) {
+    return CATEGORY_CONFIGS[category.slug as CategorySlug];
+  }
+
+  // Strategy 2: Try matching by id (some APIs use numeric IDs)
+  const idToSlugMap: Record<string | number, CategorySlug> = {
+    6: 'dustHaze',
+    16: 'manmade', 
+    15: 'seaLakeIce',
+    10: 'severeStorms',
+    14: 'snow',
+    12: 'volcanoes',
+    17: 'waterColor',
+    9: 'floods',
+    8: 'wildfires',
+  };
+  
+  if (category.id && idToSlugMap[category.id]) {
+    return CATEGORY_CONFIGS[idToSlugMap[category.id]];
+  }
+
+  // Strategy 3: Try matching by title (case-insensitive)
+  if (category.title) {
+    const titleLower = category.title.toLowerCase();
+    const matchedSlug = TITLE_TO_SLUG_MAP[titleLower];
+    if (matchedSlug) {
+      return CATEGORY_CONFIGS[matchedSlug];
+    }
+  }
+
+  // Fallback
+  console.warn('[EventMarker] Could not match category:', category);
+  return CATEGORY_CONFIGS.wildfires;
 }
 
 /**
  * Get pin color for an event
  */
-export function getEventPinColor(event: { categories?: Array<{ slug?: string }> }): string {
+export function getEventPinColor(event: { categories?: Array<{ id?: number | string; slug?: string; title?: string }> }): string {
   return getCategoryConfig(event).color;
 }
 
 /**
  * Get emoji for an event
  */
-export function getEventEmoji(event: { categories?: Array<{ slug?: string }> }): string {
+export function getEventEmoji(event: { categories?: Array<{ id?: number | string; slug?: string; title?: string }> }): string {
   return getCategoryConfig(event).emoji;
 }
 
