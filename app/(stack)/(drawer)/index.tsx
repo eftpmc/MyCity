@@ -84,68 +84,17 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Map */}
-      <MapView
-        ref={mapRef}
-        style={RNStyleSheet.absoluteFillObject}
-        initialRegion={{
-          latitude: 37.7749,
-          longitude: -122.4194,
-          latitudeDelta: 15,
-          longitudeDelta: 15,
-        }}
-        onRegionChangeComplete={(region) => {
-          setZoomLevel(region.latitudeDelta);
-          if (region.latitudeDelta < 2) {
-            updateNearestCity(region.latitude, region.longitude);
-          } else {
-            setNearestCity(null);
-          }
-        }}
-        onPress={() => setSelectedCity(null)}
-      >
-        <>
-          {/* Natural Events */}
-          {events.map((ev, i) => {
-            // each event can have multiple geometries, find the first valid coordinate
-            const geom = Array.isArray(ev.geometry) ? ev.geometry.find((g) => g.coordinates?.length >= 2) : null;
-            if (!geom) return null;
+      <MapDisplay
+        mapRef={mapRef}
+        cities={cities}
+        events={events}
+        activeLayer={activeLayer}
+        onFlyToCity={flyToCity}
+        onRegionChange={updateNearestCity}
+        onDeselectCity={() => setSelectedCity(null)}
+        setZoomLevel={setZoomLevel}
+      />
 
-<<<<<<< Updated upstream
-            const [lon, lat] = geom.coordinates;
-            return (
-              <Marker
-                key={`event-${i}`}
-                coordinate={{ latitude: lat, longitude: lon }}
-                title={ev.title}
-                description={ev.categories?.map((c: any) => c.title).join(', ')}
-                pinColor="#ff7043" // orange tone
-              />
-            );
-          })}
-          {cities.map((city, index) => (
-            <Marker
-              key={index}
-              coordinate={{
-                latitude: parseFloat(city.lat),
-                longitude: parseFloat(city.lng),
-              }}
-              title={city.city}
-              description={city.state_name}
-              onPress={() => flyToCity(city)}
-            />
-          ))}
-          {activeLayer && (
-            <UrlTile
-              urlTemplate={activeLayer.url}
-              maximumZ={activeLayer.maxZoom ?? 9}
-              zIndex={-1}
-              tileSize={256}
-            />
-          )}
-        </>
-      </MapView>
-=======
       <TopControls
         navigation={navigation}
         query={query}
@@ -159,47 +108,8 @@ export default function HomeScreen() {
         results={results}
         flyToCity={flyToCity}
       />
->>>>>>> Stashed changes
 
-      {/* Top controls (hamburger + search + dropdown) */}
-      <View style={styles.topControls}>
-        <TouchableOpacity
-          style={styles.hamburger}
-          onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
-        >
-          <Menu size={22} color="#fff" />
-        </TouchableOpacity>
-
-        <View style={styles.searchWrapper}>
-          <Search size={20} color="#888" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for a city"
-            placeholderTextColor="#888"
-            value={query}
-            onChangeText={searchCities}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <X size={20} color="#888" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Dropdown Button */}
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => setDropdownVisible(true)}
-        >
-          <Text style={styles.dropdownText}>
-            {activeLayer?.name || 'No Layer'}
-          </Text>
-          <ChevronDown size={18} color="#fff" style={{ marginLeft: 4 }} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Dropdown Modal */}
-      <Modal
+      <LayerDropdown
         visible={dropdownVisible}
         setVisible={setDropdownVisible}
         availableLayers={availableLayers}
