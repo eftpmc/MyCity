@@ -209,13 +209,12 @@ const styles = StyleSheet.create({
   },
   resultsList: {
     position: 'absolute',
+    top: 136, // comfortably below the search bar
     left: 20,
     right: 20,
-    bottom: 90, // move search results to bottom of screen
-    top: 110, // move results just below the top controls
-    maxHeight: 300,
+    maxHeight: 320,
     zIndex: 3,
-    paddingTop: 8,
+    paddingTop: 10, // visual gap between input and first result
   },
   resultsContainer: { paddingTop: 0, paddingBottom: 12 },
   resultItem: {
