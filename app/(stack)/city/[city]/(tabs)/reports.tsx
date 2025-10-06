@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EnvironmentalDashboard } from '@/components/EnvironmentalDashboard';
+import { CommentsSection } from '@/components/CommentsSection';
 import { useEnvironmental } from '@/contexts/EnvironmentalContext';
 import usCitiesData from '@/data/us_cities.json';
 
@@ -101,6 +102,7 @@ export default function CityReportsPage() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <EnvironmentalDashboard cityName={displayCityName} />
+        <CommentsSection cityName={displayCityName} />
       </ScrollView>
     </SafeAreaView>
   );

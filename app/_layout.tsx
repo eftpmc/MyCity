@@ -1,5 +1,6 @@
 import CustomDrawer from '@/components/CustomDrawer';
 import { CitiesProvider } from '@/contexts/CitiesContext';
+import { CommentsProvider } from '@/contexts/CommentsContext';
 import { EventProvider } from "@/contexts/EventContext";
 import { EnvironmentalProvider } from "@/contexts/EnvironmentalContext";
 import { MapLayerProvider } from '@/contexts/MapLayerContext';
@@ -18,20 +19,22 @@ export default function RootLayout() {
       <MapLayerProvider>
         <EventProvider>
           <EnvironmentalProvider>
-            <CitiesProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <Drawer
-                  drawerContent={(props) => <CustomDrawer {...props} />}
-                  screenOptions={{
-                    headerShown: false,
-                    drawerStyle: { backgroundColor: '#111', width: 280 },
-                  }}
-                >
-                  {/* One screen that hosts a Stack which includes BOTH your map and city routes */}
-                  <Drawer.Screen name="(stack)" options={{ drawerLabel: 'Map' }} />
-                </Drawer>
-              </GestureHandlerRootView>
-            </CitiesProvider>
+            <CommentsProvider>
+              <CitiesProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <Drawer
+                    drawerContent={(props) => <CustomDrawer {...props} />}
+                    screenOptions={{
+                      headerShown: false,
+                      drawerStyle: { backgroundColor: '#111', width: 280 },
+                    }}
+                  >
+                    {/* One screen that hosts a Stack which includes BOTH your map and city routes */}
+                    <Drawer.Screen name="(stack)" options={{ drawerLabel: 'Map' }} />
+                  </Drawer>
+                </GestureHandlerRootView>
+              </CitiesProvider>
+            </CommentsProvider>
           </EnvironmentalProvider>
         </EventProvider>
       </MapLayerProvider>
