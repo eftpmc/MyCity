@@ -127,8 +127,19 @@ export default function HomeScreen() {
     setFilters({ ...filters, categories: [] });
   };
 
-  // 🔹 Quick ranges: add months to Start Date → set End Date
+  const selectAllCategories = () => {
+    setFilters({ ...filters, categories: Object.values(CATEGORY_MAP) });
+  };
+
+  // 🔹 Quick ranges: add months to Start Date → set End Date (toggleable)
   const applyQuickRange = (key: "1M" | "3M" | "6M" | "1Y") => {
+    // If the same button is clicked again, deselect it
+    if (activeQuick === key) {
+      setActiveQuick(null);
+      setFilters({ ...filters, end: "" });
+      return;
+    }
+
     const startBase = filters.start && !isNaN(Date.parse(filters.start))
       ? new Date(filters.start)
       : new Date();
@@ -200,9 +211,10 @@ export default function HomeScreen() {
         handleIndicatorStyle={styles.sheetHandle}
       >
         <BottomSheetView style={styles.sheetContent}>
-          <Text style={styles.sheetTitle}>Event Filters</Text>
+          <Text style={styles.sheetTitle}>Disaster Event Filters</Text>
 
           {/* 📅 Quick Ranges */}
+          <Text style={styles.label}>Time Range (tap to toggle)</Text>
           <View style={styles.quickRow}>
             {(["1M", "3M", "6M", "1Y"] as const).map((k) => (
               <TouchableOpacity
@@ -244,15 +256,29 @@ export default function HomeScreen() {
 
           {/* 🔖 Categories */}
           <View style={styles.categoriesHeaderRow}>
-            <Text style={[styles.label, { marginTop: 10 }]}>Categories</Text>
-            <TouchableOpacity
-              onPress={deselectAllCategories}
-              style={styles.smallOutlineBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.smallOutlineBtnText}>Deselect All</Text>
-            </TouchableOpacity>
+            <Text style={[styles.label, { marginTop: 10 }]}>Event Categories</Text>
+            <View style={styles.categoryButtonsRow}>
+              <TouchableOpacity
+                onPress={selectAllCategories}
+                style={styles.smallOutlineBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.smallOutlineBtnText}>Select All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={deselectAllCategories}
+                style={styles.smallOutlineBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.smallOutlineBtnText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+          {filters.categories.length === 0 && (
+            <Text style={styles.helpText}>
+              💡 Select event categories below to see natural disasters and weather events on the map
+            </Text>
+          )}
           <View style={styles.categoriesWrap}>
             {Object.keys(CATEGORY_MAP).map((cat) => (
               <TouchableOpacity
@@ -358,6 +384,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  categoryButtonsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  helpText: {
+    fontSize: 13,
+    color: "#888",
+    fontStyle: "italic",
+    marginBottom: 12,
+    textAlign: "center",
   },
   smallOutlineBtn: {
     paddingVertical: 6,

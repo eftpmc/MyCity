@@ -24,7 +24,6 @@ export function CommentsSection({ cityName }: CommentsSectionProps) {
 
   // Load comments for this city
   useEffect(() => {
-    console.log('🏙️ CommentsSection: Loading comments for city:', cityName);
     loadCommentsForCity(cityName);
   }, [cityName, loadCommentsForCity]);
 

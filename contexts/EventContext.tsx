@@ -81,7 +81,8 @@ export const CATEGORY_MAP: Record<string, string> = {
   "Wildfires": "wildfires",
 };
 
-export const DEFAULT_CATS = Object.values(CATEGORY_MAP);
+// Start with no categories selected - events only show when user enables filters
+export const DEFAULT_CATS: string[] = [];
 
 // ============================================================================
 // UTILITY FUNCTIONS

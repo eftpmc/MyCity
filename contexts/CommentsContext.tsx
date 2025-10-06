@@ -49,10 +49,9 @@ export function CommentsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!currentCityName) return;
 
-    console.log('🔍 Loading comments for city:', currentCityName);
     setLoading(true);
     const commentsRef = collection(db, 'comments');
-    // For debugging: let's also try without the city filter to see all comments
+    // Temporary fix: Get all comments and filter in memory (no index needed)
     const q = query(
       commentsRef,
       orderBy('timestamp', 'desc')
@@ -61,24 +60,24 @@ export function CommentsProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        console.log('📥 Received snapshot with', snapshot.docs.length, 'comments for', currentCityName);
-        const fetchedComments: Comment[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          console.log('📝 Comment data:', data);
-          return {
-            id: doc.id,
-            cityName: data.cityName,
-            username: data.username,
-            text: data.text,
-            timestamp: data.timestamp?.toDate() || new Date(),
-          };
-        });
+        const fetchedComments: Comment[] = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              cityName: data.cityName,
+              username: data.username,
+              text: data.text,
+              timestamp: data.timestamp?.toDate() || new Date(),
+            };
+          })
+          .filter((comment) => comment.cityName === currentCityName);
         setComments(fetchedComments);
         setLoading(false);
         setError(null);
       },
       (err) => {
-        console.error('❌ Error fetching comments:', err);
+        console.error('Error fetching comments:', err);
         setError('Failed to load comments');
         setLoading(false);
       }
