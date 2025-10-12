@@ -1,14 +1,35 @@
-import { EventDetailModal } from '@/contexts/EventFunctionality/EventDetailModal';
-import { EventMarker } from '@/contexts/EventFunctionality/EventMarker';
 import { useMapLayer } from '@/contexts/MapLayerContext';
 import { City, EonetGeometry } from '@/types';
 import * as Location from 'expo-location'; // ✅ import location
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet as RNStyleSheet, View, TouchableOpacity, Text } from 'react-native';
-import MapView, { Marker, Region, UrlTile } from 'react-native-maps';
+import { Alert, StyleSheet as RNStyleSheet, View, TouchableOpacity, Text, Platform } from 'react-native';
+
+// Web-compatible imports (after Platform is imported)
+const EventMarker = Platform.OS === 'web' 
+  ? require('@/contexts/EventFunctionality/EventMarker.web').EventMarker
+  : require('@/contexts/EventFunctionality/EventMarker').EventMarker;
+
+const EventDetailModal = Platform.OS === 'web'
+  ? require('@/contexts/EventFunctionality/EventDetailModal.web').EventDetailModal
+  : require('@/contexts/EventFunctionality/EventDetailModal').EventDetailModal;
+
+// Web-compatible map imports - avoid react-native-maps on web
+let MapView: any, Marker: any, UrlTile: any;
+type Region = any;
+
+if (Platform.OS === 'web') {
+  MapView = View;
+  Marker = View;
+  UrlTile = View;
+} else {
+  const ReactNativeMaps = require('react-native-maps');
+  MapView = ReactNativeMaps.default;
+  Marker = ReactNativeMaps.Marker;
+  UrlTile = ReactNativeMaps.UrlTile;
+}
 
 interface Props {
-  mapRef: React.RefObject<MapView | null>;
+  mapRef: React.RefObject<any>;
   cities: City[];
   events: any[];
   activeLayer: any;

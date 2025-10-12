@@ -8,7 +8,11 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:web": "expo export --platform web",
+    "deploy:netlify": "expo export --platform web && netlify deploy --prod --dir=dist",
+    "deploy:vercel": "expo export --platform web && cd dist && vercel --prod",
+    "deploy:firebase": "expo export --platform web && firebase deploy"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

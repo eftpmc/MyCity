@@ -3,17 +3,26 @@ import { useEvents } from "@/contexts/EventContext";
 import { useMapLayer } from "@/contexts/MapLayerContext";
 import rawCities from "@/data/us_cities.json";
 import { City } from "@/types";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useNavigation, useRouter } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import MapView, { Region } from "react-native-maps";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from "react-native";
+
+// Web-compatible imports (after Platform is imported)
+const BottomSheet = Platform.OS === 'web' ? require('react-native').View : require('@gorhom/bottom-sheet').default;
+const BottomSheetView = Platform.OS === 'web' ? require('react-native').View : require('@gorhom/bottom-sheet').BottomSheetView;
+const MapView = Platform.OS === 'web' ? require('react-native').View : require('react-native-maps').default;
+type Region = any;
 
 import CityMenu from "@/components/CityMenu";
 import LayerDropdown from "@/components/LayerDropdown";
 import LayerLegend from "@/components/LayerLegend";
 import LayerTimeline from "@/components/LayerTimeline";
-import MapDisplay from "@/components/MapDisplay";
+import SimpleWebHome from "./index.simple.web";
+
+// Dynamic imports to avoid web build issues
+const MapDisplay = Platform.OS === 'web' 
+  ? require("@/components/MapDisplay.web").default
+  : require("@/components/MapDisplay").default;
 import TopControls from "@/components/TopControls";
 import { CATEGORY_MAP } from "@/contexts/EventContext";
 
@@ -41,14 +50,19 @@ const addMonths = (date: Date, months: number) => {
 };
 
 export default function HomeScreen() {
+  // Use simple web version for web platform
+  if (Platform.OS === 'web') {
+    return <SimpleWebHome />;
+  }
+
   const navigation = useNavigation();
   const router = useRouter();
   const { cities } = useCities();
   const { activeLayer, setLayer, availableLayers } = useMapLayer();
   const { events, filters, setFilters, setRegion, refreshEvents } = useEvents();
 
-  const mapRef = useRef<MapView | null>(null);
-  const bottomSheetRef = useRef<BottomSheet>(null);
+  const mapRef = useRef<any>(null);
+  const bottomSheetRef = useRef<any>(null);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<City[]>([]);
@@ -203,112 +217,112 @@ export default function HomeScreen() {
 
       {/* 🎛 Bottom Sheet Filters */}
       <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        backgroundStyle={styles.sheetBackground}
-        handleIndicatorStyle={styles.sheetHandle}
-      >
-        <BottomSheetView style={styles.sheetContent}>
-          <Text style={styles.sheetTitle}>Disaster Event Filters</Text>
+          ref={bottomSheetRef}
+          index={-1}
+          snapPoints={snapPoints}
+          enablePanDownToClose
+          backgroundStyle={styles.sheetBackground}
+          handleIndicatorStyle={styles.sheetHandle}
+        >
+          <BottomSheetView style={styles.sheetContent}>
+            <Text style={styles.sheetTitle}>Disaster Event Filters</Text>
 
-          {/* 📅 Quick Ranges */}
-          <Text style={styles.label}>Time Range (tap to toggle)</Text>
-          <View style={styles.quickRow}>
-            {(["1M", "3M", "6M", "1Y"] as const).map((k) => (
-              <TouchableOpacity
-                key={k}
-                onPress={() => applyQuickRange(k)}
-                style={[styles.quickBtn, activeQuick === k && styles.quickBtnActive]}
-              >
-                <Text style={[styles.quickText, activeQuick === k && styles.quickTextActive]}>
-                  {k}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* 📅 Date Range */}
-          <Text style={styles.label}>Start Date</Text>
-          <TextInput
-            style={styles.input}
-            value={filters.start}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#888"
-            onChangeText={(v) => {
-              setActiveQuick(null);
-              setFilters({ ...filters, start: v });
-            }}
-          />
-
-          <Text style={styles.label}>End Date</Text>
-          <TextInput
-            style={styles.input}
-            value={filters.end}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#888"
-            onChangeText={(v) => {
-              setActiveQuick(null);
-              setFilters({ ...filters, end: v });
-            }}
-          />
-
-          {/* 🔖 Categories */}
-          <View style={styles.categoriesHeaderRow}>
-            <Text style={[styles.label, { marginTop: 10 }]}>Event Categories</Text>
-            <View style={styles.categoryButtonsRow}>
-              <TouchableOpacity
-                onPress={selectAllCategories}
-                style={styles.smallOutlineBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.smallOutlineBtnText}>Select All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={deselectAllCategories}
-                style={styles.smallOutlineBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.smallOutlineBtnText}>Clear All</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          {filters.categories.length === 0 && (
-            <Text style={styles.helpText}>
-              💡 Select event categories below to see natural disasters and weather events on the map
-            </Text>
-          )}
-          <View style={styles.categoriesWrap}>
-            {Object.keys(CATEGORY_MAP).map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryButton,
-                  filters.categories.includes(CATEGORY_MAP[cat]) && styles.categoryActive,
-                ]}
-                onPress={() => handleCategoryToggle(CATEGORY_MAP[cat])}
-              >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    filters.categories.includes(CATEGORY_MAP[cat]) && styles.categoryTextActive,
-                  ]}
+            {/* 📅 Quick Ranges */}
+            <Text style={styles.label}>Time Range (tap to toggle)</Text>
+            <View style={styles.quickRow}>
+              {(["1M", "3M", "6M", "1Y"] as const).map((k) => (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => applyQuickRange(k)}
+                  style={[styles.quickBtn, activeQuick === k && styles.quickBtnActive]}
                 >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text style={[styles.quickText, activeQuick === k && styles.quickTextActive]}>
+                    {k}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          {/* ✅ Apply */}
-          <TouchableOpacity
-            style={styles.applyButton}
-            onPress={() => {
-              refreshEvents();
-              closeFilterSheet();
-            }}
-          >
+            {/* 📅 Date Range */}
+            <Text style={styles.label}>Start Date</Text>
+            <TextInput
+              style={styles.input}
+              value={filters.start}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#888"
+              onChangeText={(v) => {
+                setActiveQuick(null);
+                setFilters({ ...filters, start: v });
+              }}
+            />
+
+            <Text style={styles.label}>End Date</Text>
+            <TextInput
+              style={styles.input}
+              value={filters.end}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#888"
+              onChangeText={(v) => {
+                setActiveQuick(null);
+                setFilters({ ...filters, end: v });
+              }}
+            />
+
+            {/* 🔖 Categories */}
+            <View style={styles.categoriesHeaderRow}>
+              <Text style={[styles.label, { marginTop: 10 }]}>Event Categories</Text>
+              <View style={styles.categoryButtonsRow}>
+                <TouchableOpacity
+                  onPress={selectAllCategories}
+                  style={styles.smallOutlineBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.smallOutlineBtnText}>Select All</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={deselectAllCategories}
+                  style={styles.smallOutlineBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.smallOutlineBtnText}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {filters.categories.length === 0 && (
+              <Text style={styles.helpText}>
+                💡 Select event categories below to see natural disasters and weather events on the map
+              </Text>
+            )}
+            <View style={styles.categoriesWrap}>
+              {Object.keys(CATEGORY_MAP).map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryButton,
+                    filters.categories.includes(CATEGORY_MAP[cat]) && styles.categoryActive,
+                  ]}
+                  onPress={() => handleCategoryToggle(CATEGORY_MAP[cat])}
+                >
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      filters.categories.includes(CATEGORY_MAP[cat]) && styles.categoryTextActive,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* ✅ Apply */}
+            <TouchableOpacity
+              style={styles.applyButton}
+              onPress={() => {
+                refreshEvents();
+                closeFilterSheet();
+              }}
+            >
             <Text style={styles.applyButtonText}>Apply Filters</Text>
           </TouchableOpacity>
         </BottomSheetView>
@@ -425,4 +439,30 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   applyButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+
+  // Web filter styles
+  webFilterContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(26, 58, 92, 0.95)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#4A90E2',
+  },
+  webFilterTitle: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  webFilterText: {
+    color: '#aaa',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

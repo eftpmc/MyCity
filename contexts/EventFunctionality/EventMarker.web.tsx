@@ -2,14 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { getCategoryConfig } from './eventCategoryConfig';
 
-// Web-compatible marker component - avoid react-native-maps on web
-let Marker: any;
-if (Platform.OS === 'web') {
-  Marker = ({ children, ...props }: any) => <View {...props}>{children}</View>;
-} else {
-  Marker = require('react-native-maps').Marker;
-}
-
 interface EventMarkerProps {
   event: {
     id: string;
@@ -23,26 +15,18 @@ interface EventMarkerProps {
   onPress?: () => void;
 }
 
+// Web-compatible version that doesn't use react-native-maps
 export function EventMarker({ event, coordinate, onPress }: EventMarkerProps): React.JSX.Element {
   const config = getCategoryConfig(event);
 
+  // For web, we'll return a simple view that can be positioned absolutely
   return (
-    <Marker
-      coordinate={coordinate}
-      anchor={{ x: 0.5, y: 0.5 }}
-      centerOffset={{ x: 0, y: 0 }}
-      onPress={onPress}
-      tracksViewChanges={false}
-    >
-      <View style={styles.markerContainer}>
-        {/* Icon background circle */}
-        <View style={[styles.iconBackground, { backgroundColor: config.color }]}>
-          <Text style={styles.emoji}>{config.emoji}</Text>
-        </View>
-        {/* Optional: Add a small shadow/glow effect */}
-        <View style={styles.shadow} />
+    <View style={styles.markerContainer}>
+      <View style={[styles.iconBackground, { backgroundColor: config.color }]}>
+        <Text style={styles.emoji}>{config.emoji}</Text>
       </View>
-    </Marker>
+      <View style={styles.shadow} />
+    </View>
   );
 }
 
@@ -59,17 +43,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fff',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.4,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
   },
   emoji: {
     fontSize: 20,
@@ -85,4 +62,3 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
 });
-

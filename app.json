@@ -24,7 +24,15 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/expo-favicon.png",
+      "bundler": "metro",
+      "name": "Urba - Urban Environmental Intelligence",
+      "shortName": "Urba",
+      "description": "Real-time environmental data and disaster monitoring for US cities",
+      "startUrl": "/",
+      "display": "standalone",
+      "themeColor": "#4A90E2",
+      "backgroundColor": "#000000"
     },
     "plugins": [
       "expo-router",
