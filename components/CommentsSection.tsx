@@ -28,6 +28,7 @@ export function CommentsSection({ cityName, cityCoords }: CommentsSectionProps) 
 
   // Load comments for this city and nearby cities
   useEffect(() => {
+    console.log('[CommentsSection] 🔍 Loading comments for:', cityName, 'with coords:', cityCoords);
     loadCommentsForCity(cityName, cityCoords);
   }, [cityName, cityCoords, loadCommentsForCity]);
 
@@ -130,6 +131,13 @@ export function CommentsSection({ cityName, cityCoords }: CommentsSectionProps) 
       <Text style={styles.description}>
         Share observations about the health and wellness of this area
       </Text>
+      
+      {/* Debug Info */}
+      {!cityCoords && (
+        <Text style={styles.debugText}>
+          ⚠️ Coordinates not available - nearby comments may not work
+        </Text>
+      )}
 
       {/* Comment Filter Controls */}
       <View style={styles.filterControls}>
@@ -143,16 +151,14 @@ export function CommentsSection({ cityName, cityCoords }: CommentsSectionProps) 
             </Text>
           </TouchableOpacity>
           
-          {nearbyComments.length > 0 && (
-            <TouchableOpacity
-              style={[styles.filterButton, showNearbyComments && styles.filterButtonActive]}
-              onPress={() => setShowNearbyComments(!showNearbyComments)}
-            >
-              <Text style={[styles.filterButtonText, showNearbyComments && styles.filterButtonTextActive]}>
-                🌍 Nearby ({nearbyComments.length})
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.filterButton, showNearbyComments && styles.filterButtonActive]}
+            onPress={() => setShowNearbyComments(!showNearbyComments)}
+          >
+            <Text style={[styles.filterButtonText, showNearbyComments && styles.filterButtonTextActive]}>
+              🌍 Nearby ({nearbyComments.length})
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -512,6 +518,13 @@ const styles = StyleSheet.create({
   },
   filterButtonTextActive: {
     color: '#000000',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#FFA500',
+    marginBottom: 12,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });
 

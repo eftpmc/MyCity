@@ -78,7 +78,14 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.resultItem}
-                onPress={() => flyToCity(city)}
+                onPress={() => {
+                  flyToCity(city);
+                  // Also navigate to city details page
+                  router.push({ 
+                    pathname: '/city/[city]', 
+                    params: { ...city } 
+                  });
+                }}
               >
                 <Text style={styles.resultText}>
                   {city.city}, {city.state_name}
@@ -105,7 +112,10 @@ export default function HomeScreen() {
           
           <TouchableOpacity
             style={styles.viewDetailsButton}
-            onPress={() => router.push(`/city/${selectedCity.city}/${selectedCity.state_id}`)}
+            onPress={() => router.push({ 
+              pathname: '/city/[city]', 
+              params: { ...selectedCity } 
+            })}
           >
             <Text style={styles.viewDetailsText}>View Details & Reports</Text>
           </TouchableOpacity>

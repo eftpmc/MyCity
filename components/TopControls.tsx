@@ -2,6 +2,7 @@ import { City } from '@/types';
 import { DrawerActions } from '@react-navigation/native';
 import { ChevronDown, Filter, Menu, Search, X } from 'lucide-react-native';
 import React from 'react';
+import { useRouter } from 'expo-router';
 import {
     FlatList,
     StyleSheet,
@@ -35,6 +36,7 @@ export default function TopControls({
   flyToCity,
   onFilterPress,
 }: Props) {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const isCompact = width < 600; // stack for narrow screens
 
@@ -131,7 +133,14 @@ export default function TopControls({
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.resultItem}
-              onPress={() => flyToCity(item)}
+              onPress={() => {
+                flyToCity(item);
+                // Also navigate to city details page
+                router.push({ 
+                  pathname: '/city/[city]', 
+                  params: { ...item } 
+                });
+              }}
               activeOpacity={0.7}
             >
               <Text style={styles.resultTitle}>{item.city}</Text>
