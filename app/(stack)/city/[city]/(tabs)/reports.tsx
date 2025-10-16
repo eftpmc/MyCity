@@ -28,6 +28,7 @@ export default function CityReportsPage() {
   
   const { fetchEnvironmentalData, data: envData } = useEnvironmental();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [cityCoords, setCityCoords] = useState<{ lat: number; lng: number } | undefined>(undefined);
 
   useEffect(() => {
     if (!cityName || isInitialized) return;
@@ -44,6 +45,9 @@ export default function CityReportsPage() {
       
       console.log('[Reports] ✅ Using coordinates from params:', lat, lon);
       
+      // Store coordinates for nearby comments
+      setCityCoords({ lat, lng: lon });
+      
       // Fetch environmental data (async, happens in background)
       fetchEnvironmentalData(cityName, lat, lon);
       setIsInitialized(true);
@@ -51,9 +55,27 @@ export default function CityReportsPage() {
     }
     
     // Fallback: Find city in local JSON data (instant lookup)
-    const cityData = usCities.find((c) => 
+    // Try exact match first, then try with state if available
+    let cityData = usCities.find((c) => 
       c.city.toLowerCase() === cityName.toLowerCase()
     );
+    
+    // If no exact match and we have state info, try with state
+    if (!cityData && stateId) {
+      cityData = usCities.find((c) => 
+        c.city.toLowerCase() === cityName.toLowerCase() && 
+        c.state_id === stateId
+      );
+    }
+    
+    // If still no match, try partial matching for common variations
+    if (!cityData) {
+      cityData = usCities.find((c) => {
+        const cityLower = c.city.toLowerCase();
+        const nameLower = cityName.toLowerCase();
+        return cityLower.includes(nameLower) || nameLower.includes(cityLower);
+      });
+    }
 
     if (cityData) {
       const lat = parseFloat(cityData.lat);
@@ -61,12 +83,16 @@ export default function CityReportsPage() {
       
       console.log('[Reports] ✅ Found coordinates in local data:', lat, lon);
       
+      // Store coordinates for nearby comments
+      setCityCoords({ lat, lng: lon });
+      
       // Fetch environmental data (async, happens in background)
       fetchEnvironmentalData(cityName, lat, lon);
       setIsInitialized(true);
     } else {
       console.warn('[Reports] ⚠️ City not found, using default coordinates');
       // Use center of US as fallback
+      setCityCoords({ lat: 39.8283, lng: -98.5795 });
       fetchEnvironmentalData(cityName, 39.8283, -98.5795);
       setIsInitialized(true);
     }
@@ -102,7 +128,7 @@ export default function CityReportsPage() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <EnvironmentalDashboard cityName={displayCityName} />
-        <CommentsSection cityName={displayCityName} />
+        <CommentsSection cityName={displayCityName} cityCoords={cityCoords} />
       </ScrollView>
     </SafeAreaView>
   );

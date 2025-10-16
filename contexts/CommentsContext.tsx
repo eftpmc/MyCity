@@ -10,6 +10,10 @@ import {
   where,
 } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { City } from '@/types';
+import { findNearbyCities, getNearbyCityDescription } from '@/utils/geoUtils';
+import usCitiesData from '@/data/us_cities.json';
+import { getCommentsConfig } from '@/config/commentsConfig';
 
 export interface Comment {
   id: string;
@@ -17,14 +21,20 @@ export interface Comment {
   username: string;
   text: string;
   timestamp: Date;
+  isNearby?: boolean;
+  nearbyCityInfo?: {
+    distance: number;
+    description: string;
+  };
 }
 
 interface CommentsContextType {
   comments: Comment[];
+  nearbyComments: Comment[];
   username: string | null;
   setUsername: (username: string) => Promise<void>;
   addComment: (cityName: string, text: string) => Promise<void>;
-  loadCommentsForCity: (cityName: string) => void;
+  loadCommentsForCity: (cityName: string, cityCoords?: { lat: number; lng: number }) => void;
   loading: boolean;
   error: string | null;
 }
@@ -33,25 +43,29 @@ const CommentsContext = createContext<CommentsContextType | undefined>(undefined
 
 const USERNAME_STORAGE_KEY = '@mycity_username';
 
+const allCities = usCitiesData as City[];
+
 export function CommentsProvider({ children }: { children: React.ReactNode }) {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [nearbyComments, setNearbyComments] = useState<Comment[]>([]);
   const [username, setUsernameState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentCityName, setCurrentCityName] = useState<string | null>(null);
+  const [currentCityCoords, setCurrentCityCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Load username from AsyncStorage on mount
   useEffect(() => {
     loadUsername();
   }, []);
 
-  // Subscribe to city-specific comments
+  // Subscribe to city-specific comments and nearby city comments
   useEffect(() => {
     if (!currentCityName) return;
 
     setLoading(true);
     const commentsRef = collection(db, 'comments');
-    // Temporary fix: Get all comments and filter in memory (no index needed)
+    // Get all comments and filter in memory (no index needed)
     const q = query(
       commentsRef,
       orderBy('timestamp', 'desc')
@@ -60,19 +74,74 @@ export function CommentsProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const fetchedComments: Comment[] = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              cityName: data.cityName,
-              username: data.username,
-              text: data.text,
-              timestamp: data.timestamp?.toDate() || new Date(),
-            };
-          })
-          .filter((comment) => comment.cityName === currentCityName);
-        setComments(fetchedComments);
+        const allFetchedComments: Comment[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            cityName: data.cityName,
+            username: data.username,
+            text: data.text,
+            timestamp: data.timestamp?.toDate() || new Date(),
+          };
+        });
+
+        // Filter comments for the current city
+        const currentCityComments = allFetchedComments.filter(
+          (comment) => comment.cityName === currentCityName
+        );
+        setComments(currentCityComments);
+
+        // Find nearby cities and their comments
+        if (currentCityCoords) {
+          const config = getCommentsConfig();
+          
+          console.log('[Comments] 🔍 Finding nearby cities for:', currentCityName, 'at', currentCityCoords);
+          
+          if (config.showNearbyComments) {
+            const nearbyCities = findNearbyCities(
+              {
+                city: currentCityName,
+                state_id: '', // We'll find this from the city data
+                state_name: '',
+                lat: currentCityCoords.lat.toString(),
+                lng: currentCityCoords.lng.toString(),
+              },
+              allCities,
+              config.maxProximityMiles,
+              config.maxNearbyCities
+            );
+            
+            console.log('[Comments] 📍 Found nearby cities:', nearbyCities.map(c => `${c.city}, ${c.state_id} (${c.distance}mi)`));
+
+            // Get comments from nearby cities
+            const nearbyCityNames = nearbyCities.map(city => city.city);
+            console.log('[Comments] 🔍 Looking for comments from cities:', nearbyCityNames);
+            console.log('[Comments] 🔍 All available comments:', allFetchedComments.map(c => c.cityName));
+            
+            const nearbyCityComments = allFetchedComments
+              .filter((comment) => nearbyCityNames.includes(comment.cityName))
+              .map((comment) => {
+                const nearbyCity = nearbyCities.find(city => city.city === comment.cityName);
+                return {
+                  ...comment,
+                  isNearby: true,
+                  nearbyCityInfo: nearbyCity ? {
+                    distance: nearbyCity.distance,
+                    description: getNearbyCityDescription(nearbyCity, nearbyCity.distance),
+                  } : undefined,
+                };
+              })
+              .slice(0, config.maxNearbyComments); // Limit nearby comments
+
+            console.log('[Comments] 📍 Found nearby comments:', nearbyCityComments.length);
+            setNearbyComments(nearbyCityComments);
+          } else {
+            setNearbyComments([]);
+          }
+        } else {
+          setNearbyComments([]);
+        }
+
         setLoading(false);
         setError(null);
       },
@@ -84,7 +153,7 @@ export function CommentsProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => unsubscribe();
-  }, [currentCityName]);
+  }, [currentCityName, currentCityCoords]);
 
   const loadUsername = async () => {
     try {
@@ -127,14 +196,16 @@ export function CommentsProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Function to load comments for a specific city
-  const loadCommentsForCity = (cityName: string) => {
+  const loadCommentsForCity = (cityName: string, cityCoords?: { lat: number; lng: number }) => {
     setCurrentCityName(cityName);
+    setCurrentCityCoords(cityCoords || null);
   };
 
   return (
     <CommentsContext.Provider
       value={{
         comments,
+        nearbyComments,
         username,
         setUsername,
         addComment,

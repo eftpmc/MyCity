@@ -11,21 +11,25 @@ import {
 } from 'react-native';
 import { useComments } from '@/contexts/CommentsContext';
 import { UsernameModal } from './UsernameModal';
+import { getCommentsConfig } from '@/config/commentsConfig';
 
 interface CommentsSectionProps {
   cityName: string;
+  cityCoords?: { lat: number; lng: number };
 }
 
-export function CommentsSection({ cityName }: CommentsSectionProps) {
-  const { comments, username, setUsername, addComment, loadCommentsForCity, loading } = useComments();
+export function CommentsSection({ cityName, cityCoords }: CommentsSectionProps) {
+  const { comments, nearbyComments, username, setUsername, addComment, loadCommentsForCity, loading } = useComments();
   const [commentText, setCommentText] = useState('');
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showNearbyComments, setShowNearbyComments] = useState(true);
+  const [showLocalComments, setShowLocalComments] = useState(true);
 
-  // Load comments for this city
+  // Load comments for this city and nearby cities
   useEffect(() => {
-    loadCommentsForCity(cityName);
-  }, [cityName, loadCommentsForCity]);
+    loadCommentsForCity(cityName, cityCoords);
+  }, [cityName, cityCoords, loadCommentsForCity]);
 
   const handleSubmitComment = async () => {
     if (!username) {
@@ -76,16 +80,31 @@ export function CommentsSection({ cityName }: CommentsSectionProps) {
   };
 
   const renderComment = ({ item }: { item: any }) => (
-    <View style={styles.commentCard}>
+    <View style={[
+      styles.commentCard,
+      item.isNearby && styles.nearbyCommentCard
+    ]}>
       <View style={styles.commentHeader}>
         <View style={styles.usernameBadge}>
           <Text style={styles.usernameIcon}>👤</Text>
           <Text style={styles.commentUsername}>{item.username}</Text>
+          {item.isNearby && (
+            <View style={styles.nearbyBadge}>
+              <Text style={styles.nearbyBadgeText}>📍</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.commentTimestamp}>
           {formatTimestamp(item.timestamp)}
         </Text>
       </View>
+      {item.isNearby && item.nearbyCityInfo && (
+        <View style={styles.nearbyCityInfo}>
+          <Text style={styles.nearbyCityText}>
+            From {item.nearbyCityInfo.description}
+          </Text>
+        </View>
+      )}
       <Text style={styles.commentText}>{item.text}</Text>
     </View>
   );
@@ -111,6 +130,31 @@ export function CommentsSection({ cityName }: CommentsSectionProps) {
       <Text style={styles.description}>
         Share observations about the health and wellness of this area
       </Text>
+
+      {/* Comment Filter Controls */}
+      <View style={styles.filterControls}>
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            style={[styles.filterButton, showLocalComments && styles.filterButtonActive]}
+            onPress={() => setShowLocalComments(!showLocalComments)}
+          >
+            <Text style={[styles.filterButtonText, showLocalComments && styles.filterButtonTextActive]}>
+              📍 {cityName} ({comments.length})
+            </Text>
+          </TouchableOpacity>
+          
+          {nearbyComments.length > 0 && (
+            <TouchableOpacity
+              style={[styles.filterButton, showNearbyComments && styles.filterButtonActive]}
+              onPress={() => setShowNearbyComments(!showNearbyComments)}
+            >
+              <Text style={[styles.filterButtonText, showNearbyComments && styles.filterButtonTextActive]}>
+                🌍 Nearby ({nearbyComments.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
       {/* Comment Input */}
       <View style={styles.inputSection}>
@@ -162,35 +206,56 @@ export function CommentsSection({ cityName }: CommentsSectionProps) {
         </View>
       </View>
 
-      {/* Comments List */}
-      <View style={styles.commentsSection}>
-        <Text style={styles.commentsSectionTitle}>
-          Recent Comments ({comments.length})
-        </Text>
+      {/* Local Comments */}
+      {showLocalComments && (
+        <View style={styles.commentsSection}>
+          <Text style={styles.commentsSectionTitle}>
+            {cityName} Comments ({comments.length})
+          </Text>
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#00FF88" />
-            <Text style={styles.loadingText}>Loading comments...</Text>
-          </View>
-        ) : comments.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📝</Text>
-            <Text style={styles.emptyText}>No comments yet</Text>
-            <Text style={styles.emptySubtext}>
-              Be the first to share your observations!
-            </Text>
-          </View>
-        ) : (
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#00FF88" />
+              <Text style={styles.loadingText}>Loading comments...</Text>
+            </View>
+          ) : comments.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>📝</Text>
+              <Text style={styles.emptyText}>No comments yet</Text>
+              <Text style={styles.emptySubtext}>
+                Be the first to share your observations!
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={comments}
+              renderItem={renderComment}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              contentContainerStyle={styles.commentsList}
+            />
+          )}
+        </View>
+      )}
+
+      {/* Nearby City Comments */}
+      {nearbyComments.length > 0 && showNearbyComments && (
+        <View style={styles.commentsSection}>
+          <Text style={styles.commentsSectionTitle}>
+            📍 Nearby City Comments ({nearbyComments.length})
+          </Text>
+          <Text style={styles.nearbyDescription}>
+            Comments from cities within {getCommentsConfig().maxProximityMiles} miles
+          </Text>
           <FlatList
-            data={comments}
+            data={nearbyComments}
             renderItem={renderComment}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => `nearby-${item.id}`}
             scrollEnabled={false}
             contentContainerStyle={styles.commentsList}
           />
-        )}
-      </View>
+        </View>
+      )}
 
       {/* Username Modal */}
       <UsernameModal
@@ -385,6 +450,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888888',
     textAlign: 'center',
+  },
+  nearbyCommentCard: {
+    borderLeftColor: '#FFA500',
+    backgroundColor: '#1A1A0A',
+  },
+  nearbyBadge: {
+    backgroundColor: '#FFA500',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+  },
+  nearbyBadgeText: {
+    fontSize: 10,
+    color: '#000000',
+  },
+  nearbyCityInfo: {
+    backgroundColor: '#2A2A1A',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FFA500',
+  },
+  nearbyCityText: {
+    fontSize: 12,
+    color: '#FFA500',
+    fontWeight: '600',
+  },
+  nearbyDescription: {
+    fontSize: 12,
+    color: '#888888',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  filterControls: {
+    marginBottom: 20,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  filterButton: {
+    backgroundColor: '#1E1E1E',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  filterButtonActive: {
+    backgroundColor: '#00FF88',
+    borderColor: '#00FF88',
+  },
+  filterButtonText: {
+    color: '#888888',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterButtonTextActive: {
+    color: '#000000',
   },
 });
 
